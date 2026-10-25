@@ -2951,7 +2951,11 @@ function monthlySettle(){
   // 批43家业月结（外界月口径）：蛊园生长+产业收益（锚16031家产/16094位置/16450酒肆花酒/47228铺佣/54308利息）
   if(S.estate&&S.estate.owned){
     const E=S.estate;
-    for(const f of E.farmland){if(!f.ready){f.days+=30;if(f.days>=(APER_FARM[f.mat]||{days:90}).days){f.ready=true;glog(`蛊园「${f.mat}」已经成熟，可收获了。`,'good')}}}
+    for(let i=E.farmland.length-1;i>=0;i--){const f=E.farmland[i];if(!f.ready){f.days+=30;if(f.days>=(APER_FARM[f.mat]||{days:90}).days){ // 批137：成熟即自动收取（用户需求·家奴加成同口径）
+      const d=APER_FARM[f.mat],qty=Math.max(1,Math.round(R(d.yield[0],d.yield[1])*(1+0.1*E.slaves)));
+      S.mats[f.mat]=(S.mats[f.mat]||0)+qty;E.farmland.splice(i,1);
+      glog(`蛊园「${f.mat}」成熟——顺手收取×${qty}${E.slaves?`（家奴${E.slaves}名劳作加成）`:''}。`,'good');
+    }}}
     if(!isImmortal()){ // 批45：产业收益限凡境（升仙后移交仙城家业块，方案§6.4升级衔接）
     let inc=0;const notes=[];
     for(const sh of E.shops){
@@ -3620,12 +3624,13 @@ function encounterModal(enemy,onDone,opts){
 }
 // ===== 批106 战前布阵（不耗时·遭遇与灾劫共用；锚16031家产经营→蛊师惯于战前料理蛊群〔设计映射〕）=====
 function prepSetVital(uid){
+  uid=+uid; // 批137：容错字符串 uid
   if(S.vital===uid){S.vital=null;toast('已撤去本命之位。')}
   else{const g=guByUid(uid);if(!g)return;S.vital=uid;toast(`「${g.name}」立为本命——心神相连，催动减耗。`,'good')}
   render();
 }
 function prepToggleLineup(uid){
-  if(!guByUid(uid))return;
+  uid=+uid;const g=guByUid(uid);if(!g)return; // 批137：容错字符串 uid
   const i=S.lineup.indexOf(uid);
   if(i>=0){S.lineup.splice(i,1);toast('已下阵。')}
   else{if(S.lineup.length>=4){toast('上阵蛊虫至多四只（本命蛊另居核心位）。','warn');return}S.lineup.push(uid);toast('已上阵。')}
@@ -3648,8 +3653,8 @@ function battlePrepHtml(){ // 批106：布阵一览（本命核心位＋上阵�
 }
 function openBattlePrep(back){
   showModal(battlePrepHtml());
-  document.querySelectorAll('[data-prepvital]').forEach(b=>b.onclick=()=>{prepSetVital(b.dataset.prepvital);openBattlePrep(back)});
-  document.querySelectorAll('[data-preplineup]').forEach(b=>b.onclick=()=>{prepToggleLineup(b.dataset.preplineup);openBattlePrep(back)});
+  document.querySelectorAll('[data-prepvital]').forEach(b=>b.onclick=()=>{prepSetVital(+b.dataset.prepvital);openBattlePrep(back)});
+  document.querySelectorAll('[data-preplineup]').forEach(b=>b.onclick=()=>{prepToggleLineup(+b.dataset.preplineup);openBattlePrep(back)}); // 批137：原传字符串 uid，guByUid 严格相等永不命中→上阵/下阵静默无敜（批106起即坏）
   const bk=$('#prepBack');if(bk)bk.onclick=()=>{if(typeof back==='function')back();else hideModal()};
 }
 const BT_CATS=[ // 批32A五大类+批32B1 fn真源匹配（用户批32需求1·3）：候选匹配以重分类fn为准（guClsOf，B2-B4全量覆盖后fn即唯一真源）
@@ -4407,8 +4412,8 @@ function channelMod(gRank){
   const m={costMul:1,powMul:1,blocked:false,backlash:0,why:[]};
   if(isImmortal())return m;
   const t=pureTier();
-  if(t<1){m.costMul*=BATTLE_RULES.pureCostMul[t];m.why.push(`真元${PURE_NAMES[t]}稀薄：消耗×${BATTLE_RULES.pureCostMul[t]}（锚9326·威能阶差由能量品级系数承载）`)}
   const diff=gRank-S.realm.rank;
+  if(t<1&&diff>=0){m.costMul*=BATTLE_RULES.pureCostMul[t];m.why.push(`真元${PURE_NAMES[t]}稀薄：消耗×${BATTLE_RULES.pureCostMul[t]}（锚9326；批137：仅同转及以上受此限——高转真元催低转蛊充裕不受限）`)}
   if(diff>=BATTLE_RULES.crossBlock){m.blocked=true;m.why.push(`${CN(S.realm.rank)}转真元催不动${CN(gRank)}转蛊（锚32483）`)}
   else if(diff===1){m.costMul*=BATTLE_RULES.crossCostMul;m.powMul*=BATTLE_RULES.crossPowMul;m.backlash=BATTLE_RULES.crossBacklash;m.why.push(`以${CN(S.realm.rank)}转真元硬催${CN(gRank)}转蛊：消耗×${BATTLE_RULES.crossCostMul}、威能×${BATTLE_RULES.crossPowMul}、每回合遭反噬（锚3809/22304/33795）`)}
   return m;
@@ -4531,18 +4536,18 @@ function houseBattleInfo(){
   return {power,fb:hcf.fb,cost:hcf.cost,why:hcf.why,cr,atk,dfn,school:S.house.coreSchool||'力',name:S.house.name};
 }
 // 批39双轨：协同伤害基数废除（coopPower删除）——蛊虫催动走energyMul×guPower×道痕（蛊虫体系），直接攻击走playerAtkPower（蛊师体系）；仙蛊屋攻伐乘区随coopPower移除，39-2实装「催动仙蛊屋」独立行动
-function playerAtkPower(){ // 批69方案C：蛊师体系统一入口——直接进攻与赤手催动共用同一基数：肉身攻（HERO_BASE 攻）×道痕×力道被动（不含蛊虫/仙蛊屋攻伐·仙蛊屋39-2独立）；凡境旧口径 20×rank 高于肉身攻时取高者（一转20/二转40），避免低转倒退
-  let p=Math.max(heroStats().atk,20*S.realm.rank+8*S.realm.minor);
+function playerAtkPower(){ // 批69方案C：蛊师体系统一入口——直接进攻与赤手催动共用同一基数：肉身攻（HERO_BASE 攻）×道痕×力道被动（不含蛊虫/仙蛊屋攻伐·仙蛊屋39-2独立）
+  let p=heroStats().atk;
   p*=daohenMul();
   if(schoolDh('力'))p*=1+0.15*schoolPassive('力');
   return Math.round(p);
 }
-function bodyAtkBase(){ // 批70：自由残缺变形态期，直攻/赤手改走「三怪巨力」通道（杀招威能×仙元品级×每击系数）；无形态仍取playerAtkPower（批69）
+function bodyAtkBase(){ // 批70：自由残缺变形态期，直攻/赤手改走「三怪巨力」通道（杀招威能×仙元品级×每击系数）；无形态走赤手口径（批137：×0.6——蛊为战力核心，裸身近战系应急·锚3557；力道蛊师以肉身为主战例外）
   const B=(typeof BTL!=='undefined')?BTL:null;
   const fb=B&&B.buffs&&B.buffs.find(b=>b.bodyKm);
-  if(!fb)return playerAtkPower();
+  if(!fb)return Math.round(schoolDh('力')?playerAtkPower():playerAtkPower()*0.6);
   const km=(S.km||[]).find(k=>k.name===fb.bodyKm);
-  if(!km)return playerAtkPower();
+  if(!km)return Math.round(schoolDh('力')?playerAtkPower():playerAtkPower()*0.6);
   return Math.round(kmEffPower(km)*energyMul(8)*(fb.punchMul||0));
 }
 // 杀招限次：仅具名特例受限（三头六臂/六臂天尸王等，锚534/586），其余常规杀招不限次
@@ -10888,6 +10893,7 @@ function tabRefine(){
     return `<div class="card" style="padding:10px" data-fkey="ref" data-fk="${esc(r.name)}|${CN(r.rank)}转|${guFnTxt(r.name)}|#${rArr.join('#')||'无'}#|已得其方">
       <b>${esc(r.name)}</b> <span class="tag">${CN(r.rank)}转</span><span class="tag">${guFnTxt(r.name)}</span><span class="tag">${guSchoolTxt(r.name)}</span>${imp?'<span class="tag g">已改良+10%</span>':''}${r.upFrom?`<span class="tag r">升炼方 · 主料${esc(r.upFrom)}</span>`:''}
       <div class="dim" style="font-size:var(--fs-s);margin:4px 0">需：${Object.keys(r.mats).map(k=>`${esc(k)}×${r.mats[k]}（有${S.mats[k]||0}）`).concat(Object.keys(r.guMats||{}).map(k=>`${esc(k)}×${r.guMats[k]}（蛊·有${guCnt[k]||0}）`)).join('、')}</div>
+      ${r.upFrom?`<div class="dim" style="font-size:var(--fs-xs);margin-top:2px">升炼方：不可无主料直接炼制——请于蛊虫页以「${esc(r.upFrom)}」为主料升炼；未习得前可闭门推演此方。</div>`:''}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn small" data-refine="${i}" ${ok&&!r.upFrom?'':'disabled'} title="${r.upFrom?`升炼之方——须于蛊虫页以「${r.upFrom}」为主料升炼（用户批30裁决）`:''}">开始炼制（${chp}%·5-15天${matchTxt(r)}）</button>
         <button class="btn small" data-refine5="${i}" ${ok&&!r.upFrom?'':'disabled'} title="${r.upFrom?`升炼之方——须于蛊虫页以「${r.upFrom}」为主料升炼（用户批30裁决）`:''}">连炼×5（材料不足自动中止）</button>
