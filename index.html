@@ -8161,7 +8161,8 @@ function actTaskDo(){ // 执行当前任务/仙窍事务
   if(T.foe&&!confirm(`出发执行「${T.name}」（约${T.days}天）？外务凶险，恐有死伤。`))return; // 批46A S5：内务由二次点击确认，外务保留confirm
   advanceDays(T.days,'「'+T.name+'」任务');if(!S.alive)return;
   const settle=(perfect,amt)=>{ // 完成（锚13669：完美完成贡献×1.5）
-    amt=Math.round(amt*rankEconMul()); // 批113：报酬随转数缩放，四/五转不再与一转同酬〔设计映射〕
+    const foeMul=T.foe?Math.max(1,(T.foe.base+T.foe.scale*(S.realm.rank||1))/(T.foe.base+T.foe.scale)):0; // 批138：外务报酬随敌档水涨船高（敌档=base+scale×现转，归一至一转首档），修「敌随境界涨、报酬不变」
+    amt=Math.round(amt*Math.max(rankEconMul(),foeMul)); // 批113+批138：内务维持转数缩放；外务取「转数缩放/敌档追踪」较大者，不降低任何既有档位
     let cb=T.contrib;if(perfect)cb=Math.round(cb*1.5);
     S.stones+=amt;T0.contrib+=cb;T0.done++;T0.month++;if(perfect)T0.perfect++;
     if(T.hall==='外事堂')T0.squad=Math.min(9,(T0.squad||0)+1);
@@ -10919,14 +10920,18 @@ function tabRefine(){
   const refEmpty=cards.length?'':`<div class="card">${emptyState('此筛选下暂无蛊方',UIF.refScope==='known'?'尚未录得任何蛊方——可去集市寻方、闭门推演，或先看「全部蛊方」。':'换个筛选条件，或查看「全部蛊方」。','sm')}
     <div style="margin-top:6px"><button class="btn small" data-refscope="all">查看全部蛊方</button></div></div>`;
   // —— 定向推演（批20新增）：自选流派，推演该道蛊方（指定其一或随机择一）——
-  const infS=UIF.inf2.sc||'力';
-  const schRecipes=RECIPES.map((r,i)=>({r,i})).filter(x=>guSchoolArr(x.r.name).includes(infS)); // 批29：多流派蛊虫在任一所含道下皆可见
+  const infS=UIF.inf2.sc||'';
+  const infQ=(UIF.inf2.q||'').trim().toLowerCase();
+  const infGlobal=!!infQ; // 批138：输入名称即跨流派全局搜索（用户反馈：不知流派无从选起）
+  const schRecipes=RECIPES.map((r,i)=>({r,i})).filter(x=>infGlobal
+    ?(x.r.name.toLowerCase().includes(infQ)||(CN(x.r.rank)+'转').includes(infQ)||guFnTxt(x.r.name).toLowerCase().includes(infQ)||guSchoolArr(x.r.name).some(s=>s.toLowerCase().includes(infQ)))
+    :(infS?guSchoolArr(x.r.name).includes(infS):true)); // 批29：多流派蛊虫在任一所含道下皆可见
   const INF2_PAGE=6,inf2Pages=Math.max(1,Math.ceil(schRecipes.length/INF2_PAGE)); // 维护M4B：8→6
   UIF.inf2Page=Math.max(0,Math.min(inf2Pages-1,UIF.inf2Page||0));
   const inf2Shown=schRecipes.slice(UIF.inf2Page*INF2_PAGE,UIF.inf2Page*INF2_PAGE+INF2_PAGE);
   const schCards=inf2Shown.map(x=>{
     const known=!!S.recipes[x.r.name];
-    return `<div class="card" style="padding:8px;margin:4px 0" data-fkey="inf2" data-fk="${esc(x.r.name)}|${CN(x.r.rank)}转|${guFnTxt(x.r.name)}|#${infS}#|${known?'已得其方':'未得其方'}">
+    return `<div class="card" style="padding:8px;margin:4px 0" data-fkey="inf2" data-fk="${esc(x.r.name)}|${CN(x.r.rank)}转|${guFnTxt(x.r.name)}|#${guSchoolArr(x.r.name).join('#')||'无'}#|${known?'已得其方':'未得其方'}">
       <b>${esc(x.r.name)}</b> <span class="tag">${CN(x.r.rank)}转</span><span class="tag">${guFnTxt(x.r.name)}</span>
       ${known?'<span class="tag g">已得其方</span>':`<button class="btn small" data-inferrecipe="${x.i}" style="margin-left:6px">推演此方（30天，辅助见下）</button>`}
     </div>`}).join('');
@@ -10972,11 +10977,11 @@ function tabRefine(){
     <b class="gold">定向推演 · 流派蛊方（批20新增）</b>
     <p class="dim" style="font-size:var(--fs-s);margin:4px 0">自选流派，推演该道蛊方：可<b>指定其一</b>，或<b>随机</b>推演此道中尚未得方之蛊（30天/方，耗智道心力，锚131260推算耗心力）。</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0">
-      <select id="infSchool">${SCHOOLS.map(s=>`<option ${s===infS?'selected':''}>${s}</option>`).join('')}</select>
-      <span class="dim" style="font-size:var(--fs-s)">此道蛊方${schRecipes.length}种，已得${schRecipes.filter(x=>S.recipes[x.r.name]).length}方</span>
-      <button class="btn small primary" id="infRand">随机推演此道一蛊</button>
+      <select id="infSchool"><option value="" ${!infS?'selected':''}>全部流派</option>${SCHOOLS.map(s=>`<option ${s===infS?'selected':''}>${s}</option>`).join('')}</select>
+      <span class="dim" style="font-size:var(--fs-s)">${infGlobal?`跨流派搜索：命中${schRecipes.length}方（已得${schRecipes.filter(x=>S.recipes[x.r.name]).length}）`:`${infS?infS+'道':'全部流派'}蛊方${schRecipes.length}种，已得${schRecipes.filter(x=>S.recipes[x.r.name]).length}方`}</span>
+      <button class="btn small primary" id="infRand">${infS?`随机推演${infS}道一蛊`:'随机推演任意一蛊'}</button>
     </div>
-    <input type="text" class="fsearch" data-ftag="inf2" placeholder="搜索此道蛊方名称/转数/类型…" value="${esc(UIF.inf2.q)}" style="width:100%">
+    <input type="text" class="fsearch" data-ftag="inf2" placeholder="搜索全部蛊方名称/转数/类型（不限流派·清空则按所选流派列出）…" value="${esc(UIF.inf2.q)}" style="width:100%">
     ${schCards||emptyState('此道暂无蛊方','可先推演此道，或于集市、秘境中寻得蛊方。','sm')}
     ${inf2Pager}
   </div>
@@ -11747,9 +11752,9 @@ function bindTab(){
   const infS=$('#infSchool');if(infS)infS.onchange=()=>{UIF.inf2.sc=infS.value;UIF.inf2.q='';UIF.inf2Page=0;render()}; // 批20：定向推演流派切换；维护M4：重置分页
   const infR=$('#infRand');if(infR)infR.onclick=()=>{
     // 批20定向推演：随机推演所选流派内一蛊之方（锚131260推算耗智道心力）
-    const sc=UIF.inf2.sc||'力';
-    const pool=RECIPES.map((r,i)=>({r,i})).filter(x=>guSchool(x.r.name)===sc&&!S.recipes[x.r.name]);
-    if(!pool.length){toast(sc+'道蛊方皆已在手，无可推演。','warn');return}
+    const sc=UIF.inf2.sc||'';
+    const pool=RECIPES.map((r,i)=>({r,i})).filter(x=>(!sc||guSchoolArr(x.r.name).includes(sc))&&!S.recipes[x.r.name]);
+    if(!pool.length){toast(sc?(sc+'道蛊方皆已在手，无可推演。'):'诸道蛊方皆已在手，无可推演。','warn');return}
     actInferRecipe(pick(pool).i,readAuxInfer());
   };
   document.querySelectorAll('[data-sellrecipe]').forEach(b=>b.onclick=()=>{if(confirm('售出此蛊方？买家议价压价为常态，行规约束不得乱压（锚41880/47693）。'))sellRecipe(b.dataset.sellrecipe)});
