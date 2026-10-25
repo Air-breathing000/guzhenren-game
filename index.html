@@ -3452,7 +3452,10 @@ function applyFx(fx){
   if(fx.xianyuan){S.xianyuan=(S.xianyuan||0)+fx.xianyuan;glog(`仙元${fx.xianyuan>0?'+':''}${fx.xianyuan}。`)}
   if(fx.daohen){S.daohen=(S.daohen||0)+fx.daohen;glog(`道痕${fx.daohen>0?'+':''}${fx.daohen}。`)}
   if(fx.rep){S.rep+=fx.rep;glog(`声望${fx.rep>0?'+':''}${fx.rep}。`)}
-  if(fx.flag){S.flags[fx.flag]=true}
+  if(fx.flag){S.flags[fx.flag]=true; // 批136：剧情印记不再静默——逐旗给出可见反馈并接入下游
+    if(fx.flag==='saw_bainingbing'){S.dex=S.dex||{};S.dex.foe=S.dex.foe||{};if(!S.dex.foe['白凝冰']){S.dex.foe['白凝冰']=1;glog('【剧情印记】你暗暗记下白凝冰的异动——北冥冰魄体，青茅山第一天才，来日必有交集（已录入图鉴·知彼）。')}}
+    else if(fx.flag==='clan_first'){glog('【剧情印记】夺魁之名录入家族名册——主脉栽培在身，考绩评价更易上乘（锚12345〔设计映射〕）。')}
+    else glog('【剧情印记】已记下此节（'+fx.flag+'）。')}
   if(fx.recipe){if(!S.recipes[fx.recipe]){S.recipes[fx.recipe]=true;glog(`你从事件中获授蛊方——「${fx.recipe}」！`,'good')}else{S.stones+=200;glog('所得蛊方早已在手，折算元石+200。')}}
   if(fx.clue){const rid=fx.clue;if(isImmortal()||SECRET_REALMS.find(r=>r.id===rid).rankNeed<=S.realm.rank){S.clues[rid]=(S.clues[rid]||0)+1;glog(`探得秘境线索——「${SECRET_REALMS.find(r=>r.id===rid).name}」（${S.clues[rid]}）。`)}}
   if(fx.open_aperture)doOpenAperture();
@@ -3460,7 +3463,7 @@ function applyFx(fx){
   if(fx.tribulation)runTribulation();
 }
 function doOpenAperture(){
-  if(S.aperture){S.realm.exp+=20;glog('窍壁愈韧，修为渐进。');return}
+  if(S.aperture){S.realm.exp+=20;glog('你早已开窍——大典于你不过走过场，顺手温养窍壁（修为+20）。');return}
   S.aperture=true;S.realm={rank:1,minor:0,exp:0};S.essence=essCap()*0.5;
   glog('空窍开辟，真元初生——自此踏上蛊师之路！');
   toast('空窍开辟，晋入一转！','good');
@@ -8072,8 +8075,8 @@ const XIAN_TASKS={ // 批44升仙衔接：升仙后任务板化为仙窍事务�
  xunshi:{name:'资源点巡视',days:20,reward(){S.imstones=(S.imstones||0)+2;glog('资源点巡视事毕——清点仙窍产出，仙元石×2入账。','good')}}
 };
 function taskOf(id){return TASKS.find(t=>t.id===id)}
-function taskGrade(){ // 评价制（锚13669「完成的越多，完成的越完美，评价就越高」——考绩呈现）
-  const sc=(S.task.done||0)+(S.task.perfect||0)*2;
+function taskGrade(){ // 评价制（锚13669「完成的越多，完成的越完美，评价就越高」——考绩呈现）；批136：家族考核夺魁者主脉栽培，评价分+3（锚12345〔设计映射〕）
+  const sc=(S.task.done||0)+(S.task.perfect||0)*2+(S.flags.clan_first?3:0);
   return sc>=24?'族老嘉许':sc>=12?'出色蛊师':sc>=5?'称职蛊师':'初出茅庐';
 }
 function familyOf(){ // 批53A：家族状态（旧档懒初始化）。在族→受低转考绩；四转来函后可留族/散修；六转在族者转附属
@@ -9541,7 +9544,7 @@ function poNameOf(it){ // 批94：蛊方挂单无 name（只有 ri），原预�
 }
 function addPreorder(name,budget,qty,cur){
   S.preorders=S.preorders||[];
-  if(S.preorders.length>=5){toast('预购单已满（至多五条），请先取消部分预购。','warn');return}
+  if(S.preorders.length>=10){toast('预购单已满（至多十条），请先取消部分预购。','warn');return} // 批136：上限5→10（用户裁决）
   name=(name||'').trim();budget=Math.floor(+budget||0);qty=Math.max(1,Math.floor(+qty||1));
   if(!name){toast('请填写预购物品名。','warn');return}
   if(budget<1){toast('请填写有效的预算上限。','warn');return}
@@ -9604,6 +9607,23 @@ function recordMkt(id){
     h.lo=Math.min(h.lo,it.price);h.hi=Math.max(h.hi,it.price);});
 }
 function poRange(name){const h=(S.mktHist||{})[name];return h?fmt(h.lo)+'～'+fmt(h.hi):'暂无行情'}
+function poDietChips(){ // 批136：快捷预购现有蛊虫所需食物（用户需求）——聚合囊中活蛊食性，点击回填名称与预算
+  const n=MARKET_NODES[S.mkt]||{};
+  if(n.layer==='仙'||n.cur==='barter')return '';
+  const need={};
+  for(const g of (S.gus||[])){
+    if(g.immortal||g.sleep)continue;
+    if(isImmortal())continue;
+    const d=dietOf(g.name);if(!d.mat||d.special)continue;
+    const o=need[d.mat]=need[d.mat]||{gu:{},cost:d.cost||1};o.gu[g.name]=1;
+  }
+  const keys=Object.keys(need);if(!keys.length)return '';
+  const pm=(REGION_MODS[S.region]||{}).priceMul||1,mp=mktProg();
+  return `<div class="chips" style="margin:2px 0 6px"><span class="dim" style="font-size:var(--fs-xs);align-self:center">现有蛊虫口粮·快捷预购：</span>${keys.map(m=>{
+    const d=MAT_DB[m]||{},t=d.tier||1,base=Math.round((d.price||5)*pm*(t<=5?mp:1));
+    const gus=Object.keys(need[m].gu).join('、');
+    return `<button class="btn small" data-podiet="${esc(m)}" title="${esc(gus)} 需此食——点击回填名称与预算（基价×1.2）">${esc(m)}×${need[m].cost}/食（${Object.keys(need[m].gu).length}种蛊·约${fmt(base)}）</button>`}).join('')}</div>`;
+}
 // 批94：预购检索（用户反馈：原 poName 只是纯文本框，无联想、无价格区间，且任意乱写都能立单）——
 // ①输入即列游戏内确有之物（蛊虫/蛊材/蛊方/仙蛊屋图纸/传承书/人道炼蛊法）；②右侧给出价格区间（近期实测优先，无行情按当前城市系数估价）；③addPreorder 拒绝查无此物
 function poExists(name){return !!(GU_DB[name]||MAT_DB[name]||HOUSES[name]||name==='传承书'||name==='人道炼蛊法')}
@@ -11112,7 +11132,7 @@ function tabMarket(){
         <table class="shop" id="mktShelf" data-cur="${n.cur}"><thead><tr><th>货品</th><th>价</th><th>存量</th><th></th></tr></thead><tbody>${stock||`<tr><td colspan="4">${emptyState('此市暂无存货','可盘桓半日，待下一轮刷新。','sm')}</td></tr>`}</tbody></table>
         <p class="dim" style="font-size:var(--fs-xs);margin:4px 0 0">筛选取「名称／道属／转数」（如「月」「智道」「3转／三转」）与类别；可按价排序、仅看买得起的货；仅影响本页显示，不改动挂单。</p>
       </div>
-      <div class="card scroll-x"><b class="gold">预购单（至多五条 · 刷新自动比对成交）</b>
+      <div class="card scroll-x"><b class="gold">预购单（至多十条 · 刷新自动比对成交）</b>
         <p class="dim" style="font-size:var(--fs-xs);margin:4px 0 0">立单后每旬（7天）自动比对挂价，成交即入账，无需再回集市领取：单价加抽成不逾预算，即逐只购入，至多「数量」所填只数；资财不足则保留待续。「行情」为近期各轮挂单价区间，供定预算参详。寿蛊亦可预购（凡人蛊师交易偶有寿蛊拍卖，锚140563）。</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:6px 0">
           <label style="flex:1;min-width:150px"><span class="dim" style="display:block;font-size:var(--fs-xs);margin-bottom:2px">物品名</span>
@@ -11123,6 +11143,7 @@ function tabMarket(){
             <input id="poQty" type="number" min="1" value="1" style="width:110px" title="预购数量：逐只按单价预算成交，至多此数"></label>
           <button class="btn small primary" id="poAddBtn" style="margin-bottom:1px">立预购单</button>
         </div>
+        ${poDietChips()}
         <div id="poSug" style="display:none;max-height:264px;overflow:auto;border:1px solid var(--line);border-radius:6px;margin:0 0 6px"></div>
         <p class="dim" style="font-size:var(--fs-xs);margin:0 0 6px">输入名称即检索：蛊虫／蛊材／蛊方／仙蛊屋图纸。右侧价格「近期」为各轮挂单实测区间，「估价」按当前城市行情系数推算；只能预购游戏内确有的物品。</p>
         <input id="poFilter" placeholder="筛选检索预购物品…" style="width:100%;margin-bottom:6px">
@@ -11924,6 +11945,15 @@ document.querySelectorAll('[data-kmauto]').forEach(b=>b.onclick=()=>{const n=b.d
   });
   document.querySelectorAll('[data-podel]').forEach(b=>b.onclick=()=>delPreorder(+b.dataset.podel));
   const poAdd=$('#poAddBtn');if(poAdd)poAdd.onclick=()=>addPreorder($('#poName').value,$('#poBudget').value,($('#poQty')||{}).value);
+  document.querySelectorAll('[data-podiet]').forEach(b=>b.onclick=()=>{ // 批136：口粮快捷预购——回填名称与预算
+    const m=b.dataset.podiet,d=MAT_DB[m]||{},t=d.tier||1;
+    const pm=(REGION_MODS[S.region]||{}).priceMul||1,mp=mktProg();
+    const pn=$('#poName'),pb=$('#poBudget');
+    if(pn)pn.value=m;
+    if(pb)pb.value=Math.max(1,Math.ceil((d.price||5)*pm*(t<=5?mp:1)*1.2));
+    if(pn)pn.focus();
+    toast('已回填「'+m+'」——设定数量后点「立预购单」（预算=基价×1.2，可自行调整）。');
+  });
   // 批94：预购物品名联想——输入即列相关物品（含类别/市层）与价格区间，点选回填名称并按区间上限预填预算
   const poN=$('#poName'),poS=$('#poSug');
   if(poN&&poS){
