@@ -2398,7 +2398,15 @@ function deriveGu(name){
   if(S&&S.dex){S.dex.gu=S.dex.gu||{};S.dex.gu[name]=1} // 批42本局图鉴埋点（获得即录入）
   return {uid:UID++,name,rank,mat,immortal,sat:100,sleep:false}; // 批32B4：type字段废弃（cls+fn真源）
 }
-function makeGu(name){const g=deriveGu(name);addGu(g);return g}
+function makeGu(name){ // 批145：仙蛊唯一——天地同一时间仅存一只（锚76224/85458/98674）；同款在前一只不死时合炼必败（锚32152「只有前一只死了，才能有成功的可能性。否则百分百失败」/85554），故拦于入窍之前
+  const cn=canonGuName(name);const db=GU_DB[cn];
+  if((/仙蛊$/.test(cn)||(db&&db.rank>=6))&&S.gus&&S.gus.some(g=>g.name===cn)){
+    glog(`仙蛊唯一（锚76224「天地中同一时间，只能存在一只」）——「${cn}」已在囊中，此蛊未入窍。`,'warn');
+    toast(`仙蛊唯一：「${cn}」已在囊中。`,'warn');
+    return null;
+  }
+  const g=deriveGu(name);addGu(g);return g
+}
 function guPacks(){if(!S.guPacks||typeof S.guPacks!=='object')S.guPacks={};return S.guPacks} // 批100：宝黄天整批购得的凡蛊按名堆叠（不逐只塞蛊囊）
 function packAdd(name,n){const P=guPacks();P[name]=(P[name]||0)+(n||0)}
 function packOut(name,n){ // 散出为单只，此后与寻常蛊虫无异（可上阵/炼蛊/吞噬/出售）
@@ -2848,6 +2856,7 @@ function renderAuction(){
 }
 function bidLot(i){
   const l=AUCT.lots[i];if(!l)return;
+  if(l.kind==='gu'&&S.gus.some(g=>g.name===l.name)&&((GU_DB[l.name]||{}).rank>=6||/仙蛊$/.test(l.name))){toast(`仙蛊唯一——「${l.name}」已在囊中，此拍与你无缘（锚76224/98674）。`,'warn');return} // 批145：仙蛊专场已滤存量，超级拍卖兜底
   const payTxt=n=>l.cur==='xy'?xyNeedText(6,n):fmt(n)+'元石';
   const step=Math.max(1,Math.round(l.base*0.15));
   let playerBid=0,round=0;const maxRound=3;
@@ -3173,7 +3182,8 @@ function monthlySettle(){
     if(net>=20){
       zmAdd(2,'积德行善');
       const rk=Math.min(9,2+Math.floor(net/50));
-      const g=makeGu('积德蛊');
+      const g=S.gus.some(x=>x.name==='积德蛊'&&x.rank>=6)?null:makeGu('积德蛊'); // 批145：积德蛊晋仙后亦归仙蛊唯一，不再另结
+      if(!g)glog('【人道炼蛊】积德蛊已在窍中（仙蛊唯一，锚76224），本月善业自行涵养，未另结新蛊。');
       if(g){g.rank=rk;if(rk>=6)g.immortal=true;
         let msg=`本月积德行善（声望净增${net}），人道炼蛊法自行运转——空窍中自行炼出「积德蛊」（${CN(rk)}转${rk>=6?'·仙蛊':''}，锚289222行善越大转数越高）！`;
         if(S.aptPct<99){
@@ -5617,7 +5627,7 @@ function actDream(school){
       let up=false;
       if(!halfCut||Math.random()<0.5){S.schoolRealm[school]=Math.min(DAO_REALM.length-1,before+1);up=schoolRealm(school)>before}
       let msg=up?`梦境探索功成——${school}道境界跃升「${realmName(schoolRealm(school))}」！（探索梦境乃境界提升最佳捷径，锚154042）`:`梦中有所领悟，然仅凭凡蛊探梦收获有限（锚135081），化入感悟底蕴。`;
-      if(Math.random()<(half?0.1:0.25)){const mg=pick(['梦蝶蛊','梦甲仙蛊','造梦仙蛊']);makeGu(mg);msg+=`并于梦中觅得「${mg}」！`}
+      if(Math.random()<(half?0.1:0.25)){const dPool=['梦蝶蛊','梦甲仙蛊','造梦仙蛊'].filter(n=>!S.gus.some(g=>g.name===n));if(dPool.length){const mg=pick(dPool);makeGu(mg);msg+=`并于梦中觅得「${mg}」！`}} // 批145：仙蛊唯一，已拥者不入梦抩
       glog(msg,up?'good':'');
       if(!up)gainInsight(school,half?20:40);
     }
@@ -6218,6 +6228,7 @@ function doRefineOnce(idx,aux){
   if(!r){toast('无此蛊方。','warn');return false} // 批19健壮性：越界序号容错
   if(!S.recipes[r.name]){toast('未得此蛊之方，无从炼制——蛊方可经交易、推演、秘境与际遇获取。','warn');return false}
   if(r.upFrom&&GU_UP[r.name]){toast(`「${r.name}」乃升炼之方——须以「${r.upFrom}」为主料升炼（蛊虫页「升炼」，锚${GU_UP[r.name].anchor}）。`,'warn');return false} // 批30：升炼方不可无主料直接炼制（用户批30裁决：升炼须以蛊为主料＋指定蛊方）
+  if((GU_DB[r.name]||{}).rank>=6&&S.gus.some(g=>g.name===r.name)){toast(`仙蛊唯一——「${r.name}」已在囊中，同款合炼必败（锚32152「只有前一只死了，才能有成功的可能性。否则百分百失败」/85554）。`,'warn');return false} // 批145
   const A=auxAdd(GU_SCHOOL[r.name],aux,'refine');
   const mul=A.ym?3:1; // 长毛炼道大阵：仙材凡蛊消耗暴涨数十倍（锚293733，游戏化×3）
   for(const k in r.mats){if((S.mats[k]||0)<r.mats[k]*mul){toast(`材料不足：${k}×${r.mats[k]*mul}${A.ym?'（大阵催动，消耗暴涨数十倍，锚293733）':''}`,'warn');return false}}
@@ -6339,6 +6350,7 @@ function huiMark(name,imm){
 function actHuiRefine(name){
   const mk=S.huiMarks&&S.huiMarks[name];
   if(!mk||mk.n<1){toast('悔池无此成功印记。','warn');return}
+  if((GU_DB[name]||{}).rank>=6&&S.gus.some(g=>g.name===name)){toast(`「${name}」仍在囊中——悔池重炼乃寻回失去之蛊的法门，无从重出第二只（锚204749；仙蛊唯一，锚76224）。`,'warn');return} // 批145
   if(S.injury>0){toast('重伤之中，先休养。','warn');return}
   if(mk.imm){
     if((S.mats['同道仙材']||0)<2){toast('重炼仙蛊需同道仙材×2（借印记与光阴支流重走炼途）。','warn');return}
