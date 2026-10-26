@@ -4609,8 +4609,7 @@ function renderBattle(){
   const strat=S.autoStrategy||'atk';
   const stoneBtn=(!isImmortal()&&S.stones>=1)?`<button class="btn" data-bcmd="stone">汲取元石（转化真元，不占行动，锚1443）</button>`:'';
   const meltBtn=(isImmortal()&&((S.imstones||0)>0||[7,8,9].some(g=>(S.imst[g]||0)>0)))?`<button class="btn" data-bcmd="melt">炼化仙元石（1:1补仙元，不占行动，锚86015）</button>`:'';
-  const feedBtn=((S.mats['通用蛊食']||0)>0)?`<button class="btn" data-bcmd="feed">喂食（蛊食-1，全体饱食+20）</button>`:'';
-  const infBtn=(schoolDh('魂')>=4000)?`<button class="btn" data-bcmd="infuse">灌注道痕（魂道痕-4000，下一击+三成）</button>`:'';
+  const infBtn=(schoolDh('魂')>=4000)?`<button class="btn" data-bcmd="infuse">灌注道痕（魂道痕-4000，下一击+三成）</button>`:''; // 批141：战斗中喂食按钮已随饱食机制删除
   showModal(`
     <div class="bt-inner${dMe>0?' shake':''}">
       <div class="bt-scene" aria-hidden="true">${sceneSvg('battle')}</div>
@@ -4642,7 +4641,7 @@ function renderBattle(){
           ${noAuto?`<span class="red" style="font-size:var(--fs-xs);align-self:center">灾劫凶险，托管不可用——须亲自催动</span>`:`<button class="btn" data-bcmd="autoc" title="批101托管催蛊：每回合按所选策略自动催动，直至战斗结束（灾劫/蛊仙/梦境禁用）">托管本场（自动催蛊·${AUTO_STRAT_TXT[strat]}）</button><button class="btn" data-bcmd="auto" title="批46B托管直攻：不催蛊赤身抢攻直至战斗结束（灾劫/蛊仙/梦境之战不可用）">快速战斗（托管直攻·不催蛊）</button><select id="autoStrat" title="托管催蛊策略"><option value="atk"${strat==='atk'?' selected':''}>托管策略：强攻</option><option value="def"${strat==='def'?' selected':''}>托管策略：稳健</option><option value="save"${strat==='save'?' selected':''}>托管策略：省元</option></select><span class="dim" style="font-size:var(--fs-xs);align-self:center">强攻择威能最高｜稳健低血先守｜省元择耗低者；托管直攻不耗真元/仙元</span>`}
           ${hb?`<button class="btn ${B.houseOn?'primary':''}" data-bcmd="htoggle" title="激活后每回合自动耗仙元发挥功能（维持按屋等阶分档，批32A）">${B.houseOn?'仙蛊屋·运转中（点击关闭）':'仙蛊屋·激活（不占行动）'}</button>`:''}
           <button class="btn" data-bcmd="endturn">结束回合</button>
-          ${stoneBtn}${meltBtn}${feedBtn}${infBtn}
+          ${stoneBtn}${meltBtn}${infBtn}
         </div>
       </div>`}
     </div>
@@ -4664,8 +4663,7 @@ function battleTurn(k){
   if(k==='melt'){openMeltImstone();return}
   if(k==='htoggle'){toggleHouse();return} // 批32A：仙蛊屋激活/关闭切换，不占行动（用户批32需求2）
   if(k==='endturn'){enemyPhase();return} // 批32A：主动结束回合，放弃剩余行动（用户裁决D4）
-  if(k==='feed'){const live=battleLineup();if((S.mats['通用蛊食']||0)<1){toast('蛊食不足。','warn');return}
-    S.mats['通用蛊食']--;for(const g of live)g.sat=Math.min(100,g.sat+20);B.log.push('你喂食诸蛊，饱食回补。');afterPlayerAct();return}
+  // 批141：战斗中喂食入口已随「战斗降低饱食」机制一并删除（用户裁决）——饱食管理回归日常
   if(k==='infuse'){if(schoolDh('魂')<4000){toast('魂道道痕不足四千。','warn');return}
     S.daohenSchools['魂']=(S.daohenSchools['魂']||0)-4000;B.infuse=1;S.daohen=Math.max(0,dhTotal()-4000);
     B.log.push('你燃烧四千魂道道痕（锚2065），下一击威能+三成。');renderBattle();return}
@@ -5285,8 +5283,8 @@ function execChannelTurn(cat,src,sel,xy,strategy){
         if(mod.backlash>0)backlashHit();
       }
       mndPay(mndCost(g)); // 批32A：蛊虫心念消耗
+    // 批141：战斗中催动不再降低饱食（用户裁决删除该机制）——饱食管理回归日常（日衰减+自动喂养）
     }
-    for(const x of live){if(!x.immortal||!isImmortal())x.sat=Math.max(0,x.sat-(x.uid===S.vital?3:6))}
     if(cat==='spd'){ // 逃遁（速度类合并逃遁·用户批32需求1；成功率=速度公式）
       if(B.duel){toast('斗空蛊封锁空间——死战未分，无路可退（锚107506）。','warn');renderBattle();return} // 批51A2斗空蛊：异空间死战不可遁逃
       const rr=runChanceOf(g)/100;
@@ -8197,18 +8195,19 @@ function actTaskDo(){ // 执行当前任务/仙窍事务
     checkEndings();render();
   }
 }
-function actContribBuy(id){ // 贡献兑换阁（任务→贡献→凡材/蛊方/一转蛊/元石）
+function actContribBuy(id,times){ // 贡献兑换阁（任务→贡献→凡材/蛊方/一转蛊/元石）；批141：支持批量（×1/×5/×10，用户需求）
   const C=CONTRIB_SHOP.find(x=>x.id===id);if(!C)return;
   const T0=taskInit();
-  const cost=C.cost; // 批100：固定贡献档，不再随mktProg浮动（一转蛊价是固定250，高转玩家兑换不该被行情加价）
-  if(T0.contrib<cost){toast(`贡献不足——现有贡献${T0.contrib}，需${cost}。`,'warn');return}
+  times=Math.max(1,Math.min(10,Math.floor(+times||1)));
+  const total=C.cost*times; // 批100：固定贡献档，不再随mktProg浮动（一转蛊价是固定250，高转玩家兑换不该被行情加价）
+  if(T0.contrib<total){toast(`贡献不足——现有贡献${T0.contrib}，需${total}（${C.cost}×${times}）。`,'warn');return}
   if(id==='recipe'&&!RECIPES.some(r=>r.rank<=2&&!S.recipes[r.name]&&!r.solo)){toast('二转以下蛊方你皆已研得，无可兑换。','warn');return}
-  if(!confirm(`以贡献${cost}兑换「${C.name}」？`))return;
-  T0.contrib-=cost;
-  if(id==='stones'){S.stones+=200;glog('以贡献兑换元石二百。')}
-  else if(id==='mats'){const got={};for(let i=0;i<16;i++){const m=pick(['月光草','月兰花','铁骨花','青藤蔓']);S.mats[m]=(S.mats[m]||0)+1;got[m]=(got[m]||0)+1}glog(`以贡献兑换凡材礼包（十六份）——${Object.keys(got).map(k=>k+'×'+got[k]).join('、')}。`)}
-  else if(id==='gu'){const pool=Object.keys(GU_DB).filter(n=>GU_DB[n].rank===1&&GU_CLS[n]);const nm=pool.length?pick(pool):'月光蛊';makeGu(nm);glog(`家族虫房拨予一转蛊「${nm}」一只（锚16679一转蛊市价50元石之谱）。`,'good')}
-  else if(id==='recipe'){const pool=RECIPES.filter(r=>r.rank<=2&&!S.recipes[r.name]&&!r.solo);const x=pool.length?pick(pool):null;if(x){S.recipes[x.name]=true;glog(`家族授你限定蛊方「${x.name}」——秘录入册（锚13669评价制积累）。`,'good')}}
+  if(!confirm(`以贡献${total}兑换「${C.name}」×${times}？`))return;
+  T0.contrib-=total;
+  if(id==='stones'){S.stones+=200*times;glog(`以贡献兑换元石${200*times}（×${times}）。`)}
+  else if(id==='mats'){const got={};for(let n=0;n<times;n++)for(let i=0;i<16;i++){const m=pick(['月光草','月兰花','铁骨花','青藤蔓']);S.mats[m]=(S.mats[m]||0)+1;got[m]=(got[m]||0)+1}glog(`以贡献兑换凡材礼包（十六份×${times}）——${Object.keys(got).map(k=>k+'×'+got[k]).join('、')}。`)}
+  else if(id==='gu'){const pool=Object.keys(GU_DB).filter(n=>GU_DB[n].rank===1&&GU_CLS[n]);const got={};for(let n=0;n<times;n++){const nm=pool.length?pick(pool):'月光蛊';makeGu(nm);got[nm]=(got[nm]||0)+1}glog(`家族虫房拨予一转蛊（×${times}）——${Object.keys(got).map(k=>`「${k}」×${got[k]}`).join('、')}（锚16679一转蛊市价50元石之谱）。`,'good')}
+  else if(id==='recipe'){for(let n=0;n<times;n++){const pool=RECIPES.filter(r=>r.rank<=2&&!S.recipes[r.name]&&!r.solo);const x=pool.length?pick(pool):null;if(x){S.recipes[x.name]=true;glog(`家族授你限定蛊方「${x.name}」——秘录入册（锚13669评价制积累）。`,'good')}else{S.stones+=200;glog('已无未会二转以下蛊方，折算元石+200。')}}}
   render();
 }
 function actXianTask(id){ // 仙窍事务接取（升仙衔接·同守单事务之则）
@@ -10446,7 +10445,7 @@ function tabHome(){
     :`<div style="margin:6px 0"><b style="font-size:var(--fs-s)">${loose?'内务悬赏':'内务堂'}</b>${taskRotPool().map(id=>taskOf(id)).filter(t=>t&&t.hall==='内务堂').map(row).join('')}</div>
     <div style="margin:6px 0"><b style="font-size:var(--fs-s)">${loose?'外事悬赏':'外事堂'}</b>${taskRotPool().map(id=>taskOf(id)).filter(t=>t&&t.hall==='外事堂').map(row).join('')}</div>
     <p class="dim" style="font-size:var(--fs-xs);margin:4px 0 0">${loose?'散修委托每三十天轮换一批；没有家族兜底，报酬就是全部（锚51031/205374）。':'「十六岁从学堂毕业，组成五人小组，完成家族任务」——首次外务，同窗组员随行助战（战力+三成，锚12345/12538）。外务危险度随修为升级（锚12345），报酬亦厚（锚13683分档）。任务板每三十天轮换一批（批47·锚13669月任务制延伸〔设计映射〕）。'}</p>`}
-    <div style="margin-top:8px;border-top:1px solid var(--line);padding-top:6px"><b style="font-size:var(--fs-s)">${loose?'人情兑换阁':'贡献兑换阁'}</b>${CONTRIB_SHOP.map(c=>`<div style="font-size:var(--fs-s);margin:3px 0;display:flex;justify-content:space-between;gap:6px"><span>${esc(c.name)}（${loose?'人情':'贡献'}${c.cost}）</span><button class="btn small" data-taskbuy="${c.id}">兑换</button></div>`).join('')}</div>
+    <div style="margin-top:8px;border-top:1px solid var(--line);padding-top:6px"><b style="font-size:var(--fs-s)">${loose?'人情兑换阁':'贡献兑换阁'}</b><span class="dim" style="font-size:var(--fs-xs)">（批141：支持批量）</span>${CONTRIB_SHOP.map(c=>`<div style="font-size:var(--fs-s);margin:3px 0;display:flex;justify-content:space-between;gap:6px"><span>${esc(c.name)}（${loose?'人情':'贡献'}${c.cost}）</span><span style="white-space:nowrap"><button class="btn small" data-taskbuy="${c.id}">兑换</button><button class="btn small" data-taskbuy="${c.id}" data-taskbuytimes="5">×5</button><button class="btn small" data-taskbuy="${c.id}" data-taskbuytimes="10">×10</button></span></div>`).join('')}</div>
     </div>`;
   })()}
   <div class="card-h" style="padding:10px 14px"><b class="gold">营生捷径</b>
@@ -11869,7 +11868,7 @@ document.querySelectorAll('[data-kmauto]').forEach(b=>b.onclick=()=>{const n=b.d
       S=o;mergeDefaults(S);TAB='home';doAuto();render();toast('存档导入成功。','good');
     }catch(e){toast('导入失败：'+e.message,'bad')}
   };
-  document.querySelectorAll('[data-taskbuy]').forEach(b=>b.onclick=()=>actContribBuy(b.dataset.taskbuy));
+  document.querySelectorAll('[data-taskbuy]').forEach(b=>b.onclick=()=>actContribBuy(b.dataset.taskbuy,b.dataset.taskbuytimes)); // 批141：支持批量
   document.querySelectorAll('[data-xsw]').forEach(b=>b.onclick=()=>actXianTask(b.dataset.xsw));
   // 批45商贸金融事件绑定
   document.querySelectorAll('[data-consign]').forEach(b=>b.onclick=()=>actConsign(+b.dataset.consign));
