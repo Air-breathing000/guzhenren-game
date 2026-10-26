@@ -9528,6 +9528,7 @@ function marketState(id){
     S.markets[id]={stock:genMarketFor(id),day:S.day||0};
     recordMkt(id); // 批27：记录本轮挂单行情区间（预购栏展示）
     settlePreorders(id); // 批27：预购自动比对成交（预算上限制，用户裁决）
+    settleFoodStock(id); // 批143：蛊食自动囤购买至目标
   }
   return S.markets[id].stock;
 }
@@ -9618,20 +9619,63 @@ function settlePreorders(id,quiet){ // 批130：quiet=true 时用于后台成交
     }
   }
 }
-function servicePreorders(){ // 批130：预购后台成交——每旬为已开市的集市翻新挂单并比对，无需再回集市领取
-  if(!(S.preorders||[]).length)return;
+function foodNeeds(){ // 批143：自动囤购检测——聚合囊中活蛊食性（主粮+辅料知心草），玩家设目标库存即自动补齐〔设计映射·玩家便利，无原著机制对应〕
+  const need={};
+  if(isImmortal())return need; // 仙窍供养凡蛊，不再需蛊食（与自动喂养同口径）
+  for(const g of (S.gus||[])){
+    if(g.immortal||g.sleep)continue;
+    const d=dietOf(g.name);if(d.special||!d.mat)continue;
+    const o=need[d.mat]=need[d.mat]||{gu:{},cost:d.cost||1};o.gu[g.name]=1;
+    if(d.aux){const a=need[d.aux]=need[d.aux]||{gu:{},cost:1,aux:true};a.gu[g.name+'（辅料减半）']=1}
+  }
+  return need;
+}
+function settleFoodStock(id,quiet){ // 批143：蛊食自动囤购——每逢集市到货自动比对，买至目标即止（与预购同挂点，批143用户需求）
+  S.foodPlan=S.foodPlan||{};
+  const n=MARKET_NODES[id];if(!n||n.cur==='barter')return;
+  const needs=foodNeeds();
+  const stock=(S.markets[id]||{}).stock||[];
+  const bought=[],unmet=[];let spent=0;
+  for(const mat of Object.keys(S.foodPlan)){
+    const p=S.foodPlan[mat];if(!p||!p.on||!needs[mat])continue; // 只补当前蛊虫所需（蛊已亡/售则停购）
+    let want=Math.max(0,Math.round(+p.target||10)-(S.mats[mat]||0));
+    if(want<=0)continue;
+    let got=0,short='';
+    while(want>0){
+      const it=stock.find(x=>x.qty>0&&x.kind==='mat'&&x.name===mat);
+      if(!it){short=short||'本轮无货';break}
+      const fee=nodeFee(id,it.price);const pm=perkFx().market?0.92:1;
+      const unit=Math.max(1,Math.round((it.price+fee)*pm)); // 与commitPurchase同口径（含商道九二折）
+      if(!canPayNode(id,unit)){short=short||'资财不足';break}
+      payNode(id,unit);spent+=unit;it.qty--;
+      S.mats[mat]=(S.mats[mat]||0)+1;want--;got++;
+    }
+    if(got)bought.push(`${mat}×${got}`);
+    if(want>0)unmet.push(`${mat}（缺${want}，${short}）`);
+  }
+  if(bought.length){
+    const msg=`【蛊食囤购】于「${n.name}」自动购入：${bought.join('、')}（含费共耗${nodeCurLabel(id)}${fmt(spent)}），以补至目标库存。`;
+    if(quiet)glog(msg,'good');else toast(msg,'good');
+  }
+  if(unmet.length&&quiet)glog(`【蛊食囤购】尚有缺口：${unmet.join('、')}，待下一轮集市再补。`);
+}
+function servicePreorders(){ // 批130：预购后台成交——每旬为已开市的集市翻新挂单并比对，无需再回集市领取；批143：蛊食自动囤购同旬后台补货
+  const hasPo=!!(S.preorders||[]).length;
+  const foodOn=()=>Object.keys(S.foodPlan||{}).some(k=>S.foodPlan[k]&&S.foodPlan[k].on);
+  if(!hasPo&&!foodOn())return;
   if(typeof S._poDay!=='number')S._poDay=S.day||0;
   if((S.day||0)-S._poDay<7)return;
   S._poDay=S.day;
   for(const id of Object.keys(S.markets||{})){
-    if(!S.preorders.length)break;
+    if(!hasPo&&!foodOn())break;
     const n=MARKET_NODES[id];if(!n||n.cur==='barter')continue;
-    if(!S.preorders.some(p=>!p.cur||p.cur===n.cur))continue;
+    if(hasPo&&!foodOn()&&!S.preorders.some(p=>!p.cur||p.cur===n.cur))continue; // 批143：无预购单时囤购仍遍历各市
     const cur=S.markets[id];
     if(cur&&(S.day-cur.day)<(n.refresh||7))continue;
     S.markets[id]={stock:genMarketFor(id),day:S.day};
     recordMkt(id);
-    settlePreorders(id,true);
+    if(hasPo)settlePreorders(id,true);
+    settleFoodStock(id,true); // 批143：蛊食自动囤购同步后台成交
   }
 }
 function recordMkt(id){
@@ -11166,6 +11210,19 @@ function tabMarket(){
       <div class="card scroll-x"><b class="gold">蛊食缺口 · 可喂我的蛊</b>
         <p class="dim" style="font-size:var(--fs-xs);margin:4px 0 0">按食性列出所需蛊材与库存（一次喂食量）；玉皮/白玉食玉石，白豕食兽肉，月光蛊可用知心草减半（锚12047/15693/15689/5662）。</p>
         <table class="shop"><tr><th>蛊虫</th><th>食性</th><th>库存／一次需</th><th>状态</th></tr>${foodRows||`<tr><td colspan="4">${emptyState('暂无凡蛊','升仙后凡蛊由仙窍供养，不再需要蛊食。','sm')}</td></tr>`}</table>
+        ${(()=>{ // 批143：蛊食自动囤购——检测现有蛊虫所需，设目标库存，集市到货自动买满
+          const needs=foodNeeds();S.foodPlan=S.foodPlan||{};
+          const keys=Object.keys(needs);
+          if(!keys.length)return '';
+          const pm=(REGION_MODS[S.region]||{}).priceMul||1,mp=mktProg();
+          const onN=keys.filter(m=>(S.foodPlan[m]||{}).on).length;
+          return `<div style="margin-top:8px"><b style="font-size:var(--fs-s)">自动囤购（批143）</b><span class="dim" style="font-size:var(--fs-xs)">——启用后每逢集市到货自动购入此食，买至目标数即止（资财不足则留待下轮）；与「自动喂养」配合可全程免手动。当前启用 ${onN}/${keys.length} 项。</span>
+          <table class="shop"><tr><th>蛊食</th><th>需用者</th><th>库存/目标</th><th>自动</th></tr>
+          ${keys.map(m=>{const nd=needs[m],pl=S.foodPlan[m]||(S.foodPlan[m]={on:0,target:10});
+            const d=MAT_DB[m]||{},t=d.tier||1,base=Math.round((d.price||5)*pm*(t<=5?mp:1));
+            return `<tr><td>${esc(m)}${nd.aux?' <span class="tag">辅料</span>':''}</td><td class="dim" style="font-size:var(--fs-xs)">${esc(Object.keys(nd.gu).join('、'))}（每食×${nd.cost}）</td><td><b>${S.mats[m]||0}</b> / <input data-foodtgt="${esc(m)}" type="number" min="1" max="999" value="${Math.round(+pl.target||10)}" style="width:56px" title="目标囤积数（1-999）"></td><td><label style="cursor:pointer;font-size:var(--fs-s)"><input type="checkbox" data-foodon="${esc(m)}" ${pl.on?'checked':''}> 启用</label><span class="dim" style="font-size:var(--fs-xs)">｜基价约${fmt(base)}</span></td></tr>`}).join('')}
+          </table></div>`;
+        })()}
       </div>
       <div class="card card-h scroll-x"><b class="gold">货架 · ${esc(n.name)}</b><span class="dim" style="font-size:var(--fs-xs)">（点物品名看详情）</span>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0">
@@ -12005,6 +12062,8 @@ document.querySelectorAll('[data-kmauto]').forEach(b=>b.onclick=()=>{const n=b.d
   document.querySelectorAll('[data-devour]').forEach(b=>b.onclick=()=>actDevourGu(+b.dataset.devour));
   document.querySelectorAll('[data-iteminfo]').forEach(td=>td.onclick=()=>marketItemInfo(S.mkt,+td.dataset.iteminfo)); // 批96：货品详情
   document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const i=+b.dataset.buy;const q=document.querySelector('[data-buyq="'+i+'"]');buyItemAt(S.mkt,i,q?+q.value:1)});
+  document.querySelectorAll('[data-foodon]').forEach(c=>c.onchange=()=>{const m=c.dataset.foodon;S.foodPlan=S.foodPlan||{};const p=S.foodPlan[m]||(S.foodPlan[m]={on:0,target:10});p.on=c.checked?1:0;const t=document.querySelector('[data-foodtgt="'+CSS.escape(m)+'"]');if(t&&c.checked&&!(+t.value>0))t.value=10;glog(c.checked?`【蛊食囤购】已启用「${m}」自动囤购（目标${(S.foodPlan[m].target)}，集市到货即自动补齐）。`:`【蛊食囤购】已停用「${m}」自动囤购。`)}); // 批143
+  document.querySelectorAll('[data-foodtgt]').forEach(inp=>inp.onchange=()=>{const m=inp.dataset.foodtgt;S.foodPlan=S.foodPlan||{};const p=S.foodPlan[m]||(S.foodPlan[m]={on:0,target:10});p.target=Math.max(1,Math.min(999,Math.floor(+inp.value||10)));inp.value=p.target;}); // 批143：目标库存设定
   document.querySelectorAll('[data-poadd]').forEach(b=>b.onclick=()=>{ // 批27：货架一键预购（当前价+两成为预算）
     const st=(S.markets[S.mkt]||{}).stock||[];const it=st[+b.dataset.poadd];
     if(!it)return;const n=MARKET_NODES[S.mkt];const fee=n.cur==='barter'?0:nodeFee(S.mkt,it.price);
