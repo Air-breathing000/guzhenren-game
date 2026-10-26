@@ -2554,7 +2554,9 @@ function trainGain(){ // 批33B修为提速（用户裁决·时间线自洽：r1
 // ---------- 存档 ----------
 function saveKey(n){return 'gzr_slot'+n}
 function doSave(n){try{localStorage.setItem(saveKey(n),JSON.stringify(S));toast(`已存入档位${n}`,'good')}catch(e){toast('存储失败：'+e.message,'bad')}}
-function doAuto(){try{localStorage.setItem('gzr_auto',JSON.stringify(S))}catch(e){}}
+function doAuto(){try{ // 批139：资源账目自愈——宝莲月产流速误计曾使元石变 NaN（fmt 的 n||0 使其显示为 0，战斗原样显 NaN）
+  [['stones','元石'],['essence','真元'],['xianyuan','仙元'],['mnd','心念']].forEach(([k,label])=>{if(typeof S[k]==='number'&&!Number.isFinite(S[k])){S[k]=0;S.log.push(`【账目重整】${label}账目曾化作乱数，已重整归零（批139已根治成因）。`,'warn')}});
+  localStorage.setItem('gzr_auto',JSON.stringify(S))}catch(e){}}
 function loadSlot(n){const s=localStorage.getItem(n==='auto'?'gzr_auto':saveKey(n));if(!s)return false;
   try{ // 批19健壮性：损坏存档容错（JSON解析失败/结构异常时提示而非白屏）
     const o=JSON.parse(s);if(!o||typeof o!=='object')return false; // 批50：不再硬性要求realm，交由mergeDefaults重建残缺结构
@@ -3128,11 +3130,11 @@ function monthlySettle(){
   // 天元宝莲系：移动元泉——三转天元宝莲日产元石「大约五十枚」（锚L49638）／「能日产数十块元石」（锚42780）双锚印证；君莲/王莲产量原著未列数字，按升转每转三倍递增（批8用户裁决〔设计映射〕）；批34C：宝莲入仙窍后产出按仙窍日计——月产×流速（124127「外界一年，福地就过去很多年，每年都有产量」福地自产口径）
   const blnRank={'天元宝莲':1500,'天元宝君莲':4500,'天元宝王莲':13500};
   const bln=['天元宝莲','天元宝君莲','天元宝王莲'].map(n=>S.gus.find(g=>g.name===n)).find(Boolean);
-  if(bln){const st=(blnRank[bln.name]||1500)*(S.aperture?S.aperture.timeFlow:1);S.stones+=st;glog(`「${bln.name}」化生天然真元，凝聚元石+${fmt(st)}（日产约五十枚为基每升一转三倍，锚L49638；月产按仙窍月×流速）。`)}
+  if(bln){const st=Math.round((blnRank[bln.name]||1500)*((S.aperture&&typeof S.aperture==='object')?(S.aperture.timeFlow||1):1));S.stones+=st;glog(`「${bln.name}」化生天然真元，凝聚元石+${fmt(st)}（日产约五十枚为基每升一转三倍，锚L49638；月产按仙窍月×流速）。`)} // 批139：凡人 S.aperture=true（布尔）无 timeFlow，旧写法乘出 NaN 污染元石
   // 天元宝皇莲：六转出产仙元（锚85444「六转以上的天元宝皇莲，则能够出产仙元」/85440六转仙蛊）；425365-425369九转皇莲「花瓣完全转红盛放→翡翠莲蓬九九八十一颗莲子→采摘后收拢→积蓄露珠→循环盛放收缩」——周期性产出81颗，盛放周期原著未列数字〔设计映射：一仙窍月〕；品级随转数区分（批10用户裁决）；批34C：81颗/仙窍月×流速（124127福地自产口径）
   const hl=S.gus.find(g=>g.name==='天元宝皇莲');
   if(hl){
-    const n=81*(S.aperture?S.aperture.timeFlow:1);
+    const n=81*((S.aperture&&typeof S.aperture==='object')?(S.aperture.timeFlow||1):1);
     if(hl.rank>=7)S.xyGr[hl.rank]=(S.xyGr[hl.rank]||0)+n;else S.xianyuan=(S.xianyuan||0)+n;
     glog(`「天元宝皇莲」产出${XY_GRADE[Math.min(9,hl.rank)].name}×${n}（81颗/仙窍月×流速，锚85444/425366）。`);
   }
@@ -7009,7 +7011,7 @@ function checkGlobalStory(){ // 批33C：最早day+境界门槛双条件顺延�
 // ========== 批35A 人物关系系统（具名NPC+恩怨盟义；方案见docs/批35人物关系与正魔罪烙方案.md） ==========
 // 具名人物档案（Q1裁决：仅原著具名人物；rank/sc为原著语境近似定档，无直接记载者〔设计映射〕）
 const NPCS=[
- {id:'baibing',name:'白凝冰',kind:'蛊师',rank:5,sc:'冰雪',region:'北原',bio:'北冥冰魄体，青茅山同行者',anchor:'40798/58283',growth:0.35,cap:5}, // 批41：成长快（锚20160三年三转/22296前世三年后四转直证轨迹）
+ {id:'baibing',name:'白凝冰',kind:'蛊师',rank:2,sc:'冰雪',region:'北原',bio:'北冥冰魄体，青茅山同行者',anchor:'20160/22296',growth:0.35,cap:5}, // 批139修：青茅山时期为二转（锚20160「二转的时候，就击败了熊家寨的一位家老」「短短三年之后，他就成了三转的家老」直证；22296前世狼潮后三年四转自爆），原 base rank5 与时期不符；0.35/年成长恰合三年三转，cap5 为后期上限
  {id:'shangxinci',name:'商心慈',kind:'凡人',rank:0,sc:null,region:'西漠',bio:'商家城凡人少女，恩情感知方',anchor:'43261/46609'},
  {id:'shangyanfei',name:'商燕飞',kind:'蛊师',rank:4,sc:'土',region:'西漠',bio:'商家族长，可出面消通缉令',anchor:'49026/49843',growth:0.08,cap:5},
  {id:'heiloulan',name:'黑楼兰',kind:'蛊仙',rank:6,sc:'运',region:'北原',bio:'魔道蛊仙，雪山盟约盟友',anchor:'125847/133686',growth:0.10,cap:7},
@@ -7601,7 +7603,7 @@ function qingmaoStart(mode){
   S.flags.qingmaoDay=(S.day||0)+QINGMAO.cd;
   advanceDays(QINGMAO.days,'青茅山历练');if(!S.alive)return;
   const rank=S.realm.rank||1,hard=mode==='hard';
-  const e=makeEnemy({name:hard?'雷冠头狼·独狼':'狼潮·雷冠头狼',kind:'兽族',r:rank,power:Math.round((300+220*rank)*(hard?1.25:1))});
+  const e=makeEnemy({name:hard?'雷冠头狼·独狼':'狼潮·雷冠头狼',kind:'兽族',r:rank,power:Math.round((25+20*rank)*(hard?1.6:1))}); // 批139：原(300+220×rank)沿用世界NPC档——一转独狼攻260/防62一击必杀，与锚4460狼潮凡兽口径不符（青茅山狼群系低阶猎物，方源前世以月光蛊猎狼）；改按任务敌同档，独守后山险档×1.6
   startBattle(e,(res)=>{
     if(res==='win'){
       const n=hard?3:2,st=200*rank*(hard?2:1);
