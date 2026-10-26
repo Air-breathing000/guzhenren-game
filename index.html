@@ -3605,6 +3605,8 @@ function startBattle(enemy,onDone,opts){
     else BTL.log.push(`推演未成（把握${ch}%）——敌招驳杂，只窥得三分形迹。`);
   }
   if(BTL&&BTL.log.length>1)BTL.log.push('');
+  if(S.nianBeast){BTL.nianAlly=S.nianBeast;S.nianBeast=null;BTL.log.push('一头年兽循着年蛊气息应召而来，为你助战（锚212137「仙道杀招——年兽召来」）！')} // 批147：年兽召来
+  if(S.nianGuard){const d=S.nianGuard;S.nianGuard=null;(BTL.buffs=BTL.buffs||[]).push({label:'年蛊防护（+'+d+'防）',defMul:1+d/Math.max(1,heroStats().def),rounds:99});BTL.log.push('年蛊防护杀招余威护体（锚220575）——战斗全程防御加成。')} // 批147
   if(S.dex){S.dex.foe=S.dex.foe||{};S.dex.foe[enemy.name]=1} // 批42本局图鉴：遭遇之敌录入
   BTL.acts=comboCount(); // 批32A：连击行动次数（无封顶，用户裁决D4）
   if(S.flags.fenhun&&!opts.trib){BTL.acts+=1;BTL.log.push('体外蛊仙应念而出，与你并肩——本场首次行动额外+1（〔设计映射·待考〕分魂）。');} // 批84
@@ -3911,12 +3913,12 @@ const GU_CLS={
  '宙锚仙蛊':{cls:'辅助',fn:'推演',p:{'inf':8}}, // 光阴长河标记·配合人如故/江山如故锚136933/136937
  '仿伪蛊':{cls:'辅助',fn:'炼制',p:{'ref':5,'note':'仙蛊转变模仿（锚404438）',qmul:'珍稀'}}, // 仙蛊转变模仿锚404438/404440（奇蛊榜第八·盗天魔尊）；批36D：珍稀（锚404438「仿伪蛊，位列当今奇蛊榜」直证）
  '江山如故仙蛊':{cls:'辅助',fn:'产出',p:{'note':'功用杀招月结仙元+20%（锚401214·批29实装）'}}, // 修复地貌锚401214/113390；月结产出已挂（批29）
- '百年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·七转（锚210309）；蛊虫页「开采年份」：岁月灌体转化为修行，用即削年份、年份低于档位即跌转/消亡（锚210319/210321·批142实装）'}}, // 年蛊体系七转锚210309
- '一年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备一年·开采年份：岁月灌体转化为修行，用即削年份（锚210319/210321·批142实装）'}}, // 年蛊体系锚210302/210296-210324
- '两年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备两年·开采年份机制同上（锚210319/210321·批142实装）'}}, // 同上
- '五年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备五年·开采年份机制同上（锚210319/210321·批142实装）'}}, // 同上
- '十年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备十年·六转世间唯一（锚210304）；开采年份：用即削年份、年份低于档位即跌转（锚210319/210321·批142实装）'}}, // 六转仙蛊世间唯一锚210304
- '千年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备千年·八转层级（锚210313）；开采年份：用即削年份、跌转同上（批142实装）'}}, // 八转层级锚210313
+ '百年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·七转（锚210309）；催动：防护/丰年/平炼增年（批147）；用即削年份、年份低于档位即跌转/消亡（锚210319/210321）'}}, // 年蛊体系七转锚210309
+ '一年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备一年·催动（年兽饲粮/平炼引，批147按原著重写，锚210453/210807）；用即削年份（锚210319）'}}, // 年蛊体系锚210302/210296-210324
+ '两年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备两年·催动（批147按原著重写）；用即削年份（锚210319）'}}, // 同上
+ '五年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备五年·催动（批147按原著重写）；用即削年份（锚210319）'}}, // 同上
+ '十年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备十年·六转世间唯一（锚210304）；催动：防护/丰年/平炼增年（批147，锚220575/210514/210807）；用即削年份、年份低于档位即跌转（锚210319/210321）'}}, // 六转仙蛊世间唯一锚210304
+ '千年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备千年·八转层级（锚210313）；催动：防护/丰年/平炼增年（批147）；用即削年份、跌转同上'}}, // 八转层级锚210313
  // —— 运道（9）——
  '因祸得福仙蛊':{cls:'辅助',fn:'产出',p:{'note':'渡劫道痕翻倍（锚139546·批17实装）'}}, // 渡劫道痕翻倍锚139546
  '狗屎运仙蛊':{cls:'辅助',fn:'修炼',p:{'ins':3,'luck':0.05}}, // 六转锚200445
@@ -5032,6 +5034,12 @@ function wqReset(why){ // 批36A：五指剑势散尽（排他性——锚364988
 }
 function enemyPhase(){ // 敌方回合：心念自动回复15%（敌我对称）→激活屋自动结算→敌方AI行动→回合推进/行动数重置/单回合状态清除
   const B=BTL;if(!B||B.over)return;
+  if(B.nianAlly&&B.nianAlly.rounds>0){ // 批147：年兽助战（锚212143「眨眼间它就将半空中所有的凡级年蛊都吸入腹中」兽势如虹）
+    B.nianAlly.rounds--;
+    const d=Math.max(1,Math.round(B.nianAlly.dmg*(0.8+Math.random()*0.4)));
+    B.ehp-=d;B.log.push(`年兽扑击撕咬——造成${d}伤害${B.ehp<=0?'（兽势如虹，敌胆已寒）':'！'}（锚212143）`);
+    if(B.ehp<=0){winBattle();renderBattle();return}
+  }
   mndRegen();
   B.est.mnd=Math.min(B.est.mndMax||100,(B.est.mnd||0)+Math.ceil((B.est.mndMax||100)*MND_REGEN)); // 批32D：敌方心念回复对称（§5.2）
   houseAutoRun();
@@ -5897,6 +5905,7 @@ function qiGameRound(){
    '<button class="btn primary" data-qi="b">均衡纳取</button>'+
   '</div>');
   $('#mbox').querySelectorAll('[data-qi]').forEach(b=>b.onclick=()=>{
+    if(!S.qiGame){hideModal();render();return} // 批147：状态已终结时点击不再死锁
     const k=b.dataset.qi;
     if(k==='t')G.t+=R(10,14);
     else if(k==='d')G.d+=R(10,14);
@@ -5937,6 +5946,7 @@ function doAscend(silent,grade,imb){
   glog('（注：天元宝莲/天元宝君莲/天元宝王莲/天元宝皇莲皆不参与升仙任何环节，锚163/308。）');
   toast('碎窍升仙！六转蛊仙！','good');
   if(!silent)checkEndings();
+  if(!silent){hideModal();render()} // 批147修复：三气凝聚/至尊碎窍结束后关闭弹窗并刷新——原缺此二调，UI死锁在最后一轮（用户反馈）
 }
 // ---------- 灾劫闭环 ----------
 function tianyiMul(){return 0.8+clamp(S.tianyi,0,100)/125}
@@ -6236,11 +6246,14 @@ function doRefineOnce(idx,aux){
   for(const k in (r.guMats||{})){const need=(r.guMats[k]||0)*mul;const have=S.gus.filter(x=>x.name===k&&x.uid!==S.vital).length;if(have<need){toast(`蛊材不足：${k}×${need}（现${have}，须以活蛊入炉）`,'warn');return false}} // 批50：活蛊入炉（纸鹤蛊等蛊材，不再误查S.mats）
   if(r.need>S.realm.rank){toast(`需${CN(r.need)}转以上修为。`,'warn');return false}
   if(S.injury>0){toast('重伤之中，先休养。','warn');return false}
+  const stoneCost=Math.max(50,Math.round((r.val||20000)*0.015)); // 批147：合炼投元石——原著硬消耗（锚15322「往光团中扔元石」/9738「每一次合炼都是一笔不菲的开销」）
+  if(S.stones<stoneCost){toast(`合炼需投元石${fmt(stoneCost)}（锚15322），囊中不足。`,'warn');return false}
   const sanqiu=['早秋仙蛊','中秋仙蛊','晚秋仙蛊'].every(n=>S.gus.some(g=>g.name===n)); // 三秋黄鹤台宙道仙蛊：操控时序秋日（锚389694；用户批23修正）
   advanceDays(Math.max(1,Math.round(R(...ACTION_DAYS.refine)*((A.yuan&&sanqiu)?0.5:1)*(1-(A.fast||0)))),'炼制'+r.name+(A.yuan&&sanqiu?'（三秋调控时序，耗时减半〔设计映射〕）':'')+(A.fast?'（寸光阴催动，炼制加速，锚137587）':'')); // 批32B4：寸光阴fast耗时加成
   if(!S.alive)return false;
   if(!payAuxKms(A.kms))return false;
   for(const k in r.mats)S.mats[k]-=r.mats[k]*mul;
+  S.stones-=stoneCost;glog(`投入元石${fmt(stoneCost)}辅助合炼（锚15322「往光团中扔元石」）。`);
   if(A.gus.length||A.kms.length||A.house||A.ym||A.refAdd||A.must)glog(`辅助催动：${[A.gus.length&&`同道蛊虫×${A.gus.length}（锚170899）`,A.kms.length&&`杀招「${A.kms.join('」「')}」护蛊稳炉`,A.house&&'仙蛊屋炼制槽（锚586）',A.ym&&'长毛炼道大阵（锚293733）',A.refAdd&&`炼制功能蛊+${A.refAdd}%（批32B4）`,A.must&&'百战不殆·炼蛊必成（锚52315）'].filter(Boolean).join('、')}${A.yuan?'——四元方悔血炼池之妙（锚389672）':''}。${A.note}`);
   // 批11：流派蛊材匹配加成——用与目标蛊同流派之材料合炼，催化成功率（锚170899「蕴含星道智道道痕的仙材，对炼制星念仙蛊帮助非常大」）
   const matchN=matchCount(r); // 批19重构：计数统一收口（matchCount）
@@ -8232,17 +8245,20 @@ function actTaskDo(){ // 执行当前任务/仙窍事务
 const NIANYEARS={'一年蛊':1,'两年蛊':2,'五年蛊':5,'十年蛊':10,'百年蛊':100,'千年蛊':1000}; // 批142：年蛊内蕴年份（锚210302-210315）
 const isNianGu=n=>/^(一|两|五|十|百|千)年蛊$/.test(n);
 function nianGuEnsure(g){if(isNianGu(g.name)&&typeof g.yrs!=='number')g.yrs=NIANYEARS[g.name]||1}
-function actNianGuUse(uid){ // 批142：开采年份——岁月灌体化为修行；用即削年份，年份低于档位即跌转/消亡（锚210319/210321）
+function actNianGuUse(uid){ // 批147重写：年蛊用途按原著——年兽召来/防护杀招/丰年/平炼增年（锚210514/212137/220575/210807），非化修为（考据：方源实操从不延寿，延寿仅锚264162宙道法门孤例）
   const g=guByUid(+uid);if(!g||!isNianGu(g.name))return;
   nianGuEnsure(g);
-  const cons=Math.max(1,Math.ceil((g.yrs||1)*0.4)); // 用量随存量四成〔设计映射〕
-  const gain=Math.round(trainGain()*30*cons); // 每一年光阴=一月修行收益〔设计映射〕
-  S.realm.exp=(S.realm.exp||0)+gain;
-  g.yrs=(g.yrs||1)-cons;
-  glog(`你催动「${g.name}」，开采${cons}年光阴灌入己身——修为+${fmt(gain)}（锚210319「根据使用的次数和量，不断削减年份」；岁月化修行〔设计映射〕）。`,'good');
-  checkAttain();
-  nianGuRetier(g);
-  doAuto();render();
+  const nianRemove=x=>{S.gus=S.gus.filter(q=>q!==x);S.lineup=(S.lineup||[]).filter(u=>u!==x.uid);if(S.vital===x.uid)S.vital=null};
+  const ch=[];
+  if(!g.immortal){ // 凡级年蛊：撒出饲年兽（锚210453「年兽的食物，就是年蛊」）／作平炼引子（锚210813）／售卖（锚210966黑凡卖凡级年蟹日进斗金）
+    ch.push({label:'撒出饲年兽（整只消耗——下场战斗年兽助战五回合）',run:()=>{const yrs=g.yrs||1;nianRemove(g);S.nianBeast={dmg:60+25*Math.min(6,yrs),rounds:5};glog(`你撒出「${g.name}」——年兽闻味而来，为你助战（锚212172「年蛊！这可是年兽的食物」）。`,'good');doAuto();render()}});
+  }else{
+    ch.push({label:`催动·防护杀招（削${Math.max(1,Math.ceil((g.yrs||1)*0.2))}年——下场战斗全程防御大增）`,run:()=>{const c=Math.max(1,Math.ceil((g.yrs||1)*0.2));g.yrs=(g.yrs||1)-c;nianGuRetier(g);S.nianGuard=(S.nianGuard||0)+120;glog(`你以年蛊为核布下防护杀招（锚220575「以年蛊为核」），削去${c}年——下场战斗防御+120（黑凡早年手段，效果较弱〔设计映射〕）。`,'good');doAuto();render()}});
+    if(isImmortal())ch.push({label:`催动·丰年（削${Math.max(5,Math.ceil((g.yrs||1)*0.3))}年——一年内仙窍产出倍增）`,run:()=>{const c=Math.max(5,Math.ceil((g.yrs||1)*0.3));g.yrs=(g.yrs||1)-c;nianGuRetier(g);S.fengnianUntil=(S.day||0)+360;glog(`仙道杀招——丰年！（锚210514）削去${c}年，一年之内仙窍诸项资源产出倍增（锚246072「大量增加整个仙窍中的各项资源产出」）。`,'good');doAuto();render()}});
+    ch.push({label:'平炼增年（耗同道仙材×1＋一只凡级年蛊）',run:()=>{const f=S.gus.find(x=>isNianGu(x.name)&&!x.immortal&&x.uid!==g.uid);if(!f){toast('需一只凡级年蛊为引（锚210813「大量凡级年蛊，添加到仙级年蛊上面」）。','warn');return}if((S.mats['同道仙材']||0)<1){toast('平炼需仙材×1（锚210295「蛊仙消耗仙材，可以对一只年蛊，进行不断的平炼」）。','warn');return}S.mats['同道仙材']--;const add=Math.max(2,(f.yrs||1)*2);nianRemove(f);g.yrs=Math.min(999,(g.yrs||1)+add);nianGuRetier(g);glog(`平炼功成——「${f.name}」并归「${g.name}」，年份+${add}（锚210307「平炼，炼成的年蛊可以成为二十年蛊、三十八年蛊等等」）。`,'good');doAuto();render()}});
+  }
+  ch.push({label:'作罢',run:()=>{}});
+  choiceModal('催动「'+g.name+'」（余'+(g.yrs||1)+'年）','年蛊乃宙道仙蛊：作杀招核心（年兽召来/防护/丰年，锚210514/212137/220575）、饲喂年兽（锚210453「年兽的食物，就是年蛊」）、或耗仙材平炼增年（锚210807）。用即削年份，年份低于档位即跌转/消亡（锚210319/210321）。原著中年蛊不用于延寿（延寿乃宙道法门孤例锚264162，且印宙道痕碍寿蛊）。',ch);
 }
 function nianGuRetier(g){ // 批142：年份低于档位即跌转/消亡（锚210321「一千年蛊使用之后，成为九百年蛊，七转仙蛊跌落成六转」直证）
   const y=g.yrs||0;
@@ -10630,12 +10646,12 @@ function tabGu(){
             <span style="color:${satColor(st)}">${st}${isImmortal()&&!g.immortal?'':' '+Math.round(g.sat)+'%'}</span>
           </div>
           <p class="dim" style="font-size:var(--fs-xs);margin:3px 0 0">食性：${esc(dietTxt(g.name))}${!g.immortal&&!isImmortal()?`｜一次需 ${esc(feedReqTxt(g.name))}`:''}</p>
-          <details style="margin-top:2px"><summary class="dim" style="font-size:var(--fs-xs);cursor:pointer">作用详述（批142）</summary><p class="dim" style="font-size:var(--fs-xs);margin:2px 0 0">${guDesc(g.name)}｜流派：${guSchoolTxt(g.name)||'无'}${isNianGu(g.name)?`｜余${g.yrs!=null?g.yrs:(NIANYEARS[g.name]||1)}年（蛊虫页可开采年份）`:''}</p></details>
+          <details style="margin-top:2px"><summary class="dim" style="font-size:var(--fs-xs);cursor:pointer">作用详述（批142）</summary><p class="dim" style="font-size:var(--fs-xs);margin:2px 0 0">${guDesc(g.name)}｜流派：${guSchoolTxt(g.name)||'无'}${isNianGu(g.name)?`｜余${g.yrs!=null?g.yrs:(NIANYEARS[g.name]||1)}年（蛊虫页可催动）`:''}</p></details>
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         ${!S.vital&&!g.sleep?`<button class="btn small primary" data-vital="${g.uid}" title="立为本命蛊——心神相连（用户批31裁决：仅未立/本命蛊陨落后可立）">立为本命蛊</button>`:''}
-        ${isNianGu(g.name)&&!g.sleep?`<button class="btn small primary" data-nianuse="${g.uid}" title="开采年份：岁月灌体化为修行（用即削年份，年份低于档位即跌转/消亡，锚210319/210321）">开采年份（余${g.yrs!=null?g.yrs:(NIANYEARS[g.name]||1)}年）</button>`:''}
+        ${isNianGu(g.name)&&!g.sleep?`<button class="btn small primary" data-nianuse="${g.uid}" title="催动年蛊：年兽召来/防护杀招/丰年/平炼增年（用即削年份，年份低于档位即跌转/消亡，锚210319/210321）">催动（余${g.yrs!=null?g.yrs:(NIANYEARS[g.name]||1)}年）</button>`:''}
         ${g.uid!==S.vital?`<button class="btn small" data-lineup="${g.uid}">${inLine?'下阵':'上阵'}</button>`:''}
         <button class="btn small" data-feed="${g.uid}" ${g.immortal||isImmortal()?'disabled':''} title="食性：${esc(dietTxt(g.name))}">喂食（${esc(feedReqTxt(g.name))}）</button>
         <button class="btn small" data-sleep="${g.uid}">${g.sleep?'唤醒':'沉眠'}</button>
@@ -11039,7 +11055,7 @@ function tabRefine(){
     const sameGus=rArr.length?auxPool.filter(x=>x.arr.some(s=>rArr.includes(s))).map(x=>x.g):[];
     return `<div class="card" style="padding:10px" data-fkey="ref" data-fk="${esc(r.name)}|${CN(r.rank)}转|${guFnTxt(r.name)}|#${rArr.join('#')||'无'}#|已得其方">
       <b>${esc(r.name)}</b> <span class="tag">${CN(r.rank)}转</span><span class="tag">${guFnTxt(r.name)}</span><span class="tag">${guSchoolTxt(r.name)}</span>${imp?'<span class="tag g">已改良+10%</span>':''}${r.upFrom?`<span class="tag r">升炼方 · 主料${esc(r.upFrom)}</span>`:''}
-      <div class="dim" style="font-size:var(--fs-s);margin:4px 0">需：${Object.keys(r.mats).map(k=>`${esc(k)}×${r.mats[k]}（有${S.mats[k]||0}）`).concat(Object.keys(r.guMats||{}).map(k=>`${esc(k)}×${r.guMats[k]}（蛊·有${guCnt[k]||0}）`)).join('、')}</div>
+      <div class="dim" style="font-size:var(--fs-s);margin:4px 0">需：${Object.keys(r.mats).map(k=>`${esc(k)}×${r.mats[k]}（有${S.mats[k]||0}）`).concat(Object.keys(r.guMats||{}).map(k=>`${esc(k)}×${r.guMats[k]}（蛊·有${guCnt[k]||0}）`)).join('、')}｜另投元石${fmt(Math.max(50,Math.round((r.val||20000)*0.015)))}（锚15322）</div>
       ${r.upFrom?`<div class="dim" style="font-size:var(--fs-xs);margin-top:2px">升炼方：不可无主料直接炼制——请于蛊虫页以「${esc(r.upFrom)}」为主料升炼；未习得前可闭门推演此方。</div>`:''}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn small" data-refine="${i}" ${ok&&!r.upFrom?'':'disabled'} title="${r.upFrom?`升炼之方——须于蛊虫页以「${r.upFrom}」为主料升炼（用户批30裁决）`:''}">开始炼制（${chp}%·5-15天${matchTxt(r)}）</button>
@@ -12184,6 +12200,56 @@ document.querySelectorAll('[data-kmauto]').forEach(b=>b.onclick=()=>{const n=b.d
   const bq=$('#btnQuit');if(bq)bq.onclick=()=>{if(confirm('放弃当前进度并返回题页？')){S=null;SCREEN='title';render()}};
 }
 // ---------- 弹窗 ----------
+// ---------- 批147：合炼辅料口径归位 + 无功能蛊虫补全（数据装载期一次性处理） ----------
+(function(){ // 批147需求1：合炼用料按原著——主料蛊＋具名辅料＋元石（锚15302-15328/64016/56061）；「合炼需食料」无明文（锚考据），矿土类工坊材替换为具名兽骨/草木/天材辅料；原著具名方（天元宝莲系元泉/寿蛊合炼/星门蛊等）不动
+  const KEEP={'天元宝莲':1,'天元宝君莲':1,'天元宝王莲':1,'天元宝皇莲':1,'百年木魅':1,'千年木魅':1,'星门蛊':1,'血神子':1,'春秋蝉':1,'至尊仙胎蛊':1,'定空蛊':1,'遁空蛊':1,'天机蛊':1,'升炼蛊':1,'悔蛊':1,'早秋仙蛊':1,'中秋仙蛊':1,'晚秋仙蛊':1,'人兽葬生蛊':1,'邀月蛊':1};
+  RECIPES.forEach(r=>{
+    if(!r.mats||KEEP[r.name]||(r.rank||1)>=6||(r.rankTo)||(r.upFrom)||(r.solo)||(r.rare))return;
+    const ks=Object.keys(r.mats);
+    if(!ks.length)return;
+    const industrial=ks.filter(k=>(MAT_DB[k]||{}).cat==='矿土'&&k!=='痕石');
+    if(!industrial.length)return; // 食料/草木/兽骨/天材等具名辅料已合原著口径
+    const rk=r.rank||1;
+    const aux=Object.keys(MAT_DB).filter(m=>{const d=MAT_DB[m];return !d.kind&&(d.cat==='兽骨'||d.cat==='草木'||d.cat==='天材'||d.cat==='奇物')&&(d.tier||1)<=rk&&(d.tier||1)>=Math.max(1,rk-1)&&(d.price||0)<6000&&!ks.includes(m)});
+    const total=industrial.reduce((s,k)=>s+r.mats[k],0);
+    industrial.forEach(k=>delete r.mats[k]);
+    if(aux.length){const a=aux.sort(()=>Math.random()-0.5);r.mats[a[0]]=(r.mats[a[0]]||0)+Math.max(1,Math.ceil(total*0.6));if(a[1])r.mats[a[1]]=(r.mats[a[1]]||0)+Math.max(1,Math.floor(total*0.4))}
+    else r.mats['通用蛊食']=(r.mats['通用蛊食']||0)+total;
+    r.mats147='批147辅料口径（原著合炼辅料：兽躯部件/草木/天材地宝，锚28098/56568/43504）';
+  });
+})();
+(function(){ // 批147需求4：无实际功能蛊虫补全——按fn梯子＋具名策重（全部〔设计映射〕；特殊系统蛊除外）
+  const SPECIAL=new Set(['春秋蝉','至尊仙胎蛊','升炼蛊','水炼蛊','血本蛊','悔蛊','早秋仙蛊','中秋仙蛊','晚秋仙蛊','一年蛊','两年蛊','五年蛊','十年蛊','百年蛊','千年蛊','天元宝莲','天元宝君莲','天元宝王莲','天元宝皇莲','青铜舍利蛊','赤铁舍利蛊','白银舍利蛊','黄金舍利蛊','紫晶舍利蛊','因祸得福仙蛊','血颅蛊','积德蛊','江山如故仙蛊','斗空蛊','洞地蛊','星门蛊','遁空蛊','命甲仙蛊','时运仙蛊','海誓蛊','诺言蛊','言而无信蛊','毒誓蛊','山盟蛊','招灾蛊','酒神游蛊','入梦游蛊','逍遥游蛊','定仙游仙蛊','解谜仙蛊','衍化蛊','第二空窍蛊']);
+  const OV={
+   '星芽蛊':{luck:0.05},'痕石蛊':{out:'痕石',qty:1,cyc:3},'造梦仙蛊':{inf:5,healMnd:60},'木芽仙蛊':{ins:4},
+   '人如故仙蛊':{inf:6},'至亲血虫蛊':{def:30},'在乎蛊':{ins:8},'梦枕蛊':{healMnd:80},
+   '金风送爽蛊':{temp:{label:'金风送爽',stat:'atk',mul:1.2,rounds:3}},
+   '五孔玉箫蛊':{debuff:{label:'箫音扰神',mul:0.85,rounds:2}},'五弦古筝蛊':{debuff:{label:'筝音乱心',mul:0.85,rounds:2}},
+   '态度蛊':{ins:3},'变异蛊':{ins:4},'变通蛊':{ins:4},'变形仙蛊':{ins:8},'大吃':{healMnd:150},
+   '遗毒蚁蛊':{dot:{pct:6,rounds:3}},'草人蛊':{def:25},'希望蛊':{luck:0.05},
+   '力量蛊':{temp:{label:'力量',stat:'atk',mul:1.25,rounds:3}},'仇恨蛊':{debuff:{label:'仇恨引火',mul:0.85,rounds:2}},
+   '爱情蛊':{healMnd:60},'天妒仙蛊':{ins:8},'财富蛊':{luck:0.06},'气囊蛊':{def:12},'元老蛊':{ins:5},
+   '东窗蛊':{clue:1},'冰晶蛊':{def:16},'飞熊虚像蛊':{ins:8},'鳄力蛊':{temp:{label:'鳄力',stat:'atk',mul:1.2,rounds:3}},
+   '定力蛊':{def:18},'为山九仞蛊':{temp:{label:'九仞之势',stat:'atk',mul:1.3,rounds:3}},'移步换形蛊':{spd:12},
+   '挽澜仙蛊':{luck:0.08},'风气蛊':{pow:20},'移形蛊':{temp:{label:'移形换位',stat:'atk',mul:1.15,rounds:3}}
+  };
+  const LAD={'攻击':r=>({pow:Math.round(14*Math.pow(2.05,Math.max(0,r-1)))}),'防御':r=>({def:Math.round(8*Math.pow(1.8,Math.max(0,r-1)))}),'速度':r=>({spd:4+3*r}),'恢复':r=>({healMnd:20*r})};
+  const KEYS=['pow','def','healMnd','temp','dot','debuff','fog','track','dh','out','ins','luck','inf','ref','must','fast','spd','acc','teamDef','goldRes','pure','consume','clue','trib'];
+  for(const n in GU_CLS){const c=GU_CLS[n];if(!c||!c.p)continue;const p=c.p;
+    if(KEYS.some(k=>p[k]!==undefined))continue;
+    if(SPECIAL.has(n))continue;
+    const rk=(GU_DB[n]||{}).rank||1;
+    const ov=OV[n];
+    if(ov)Object.assign(p,ov);
+    else if(LAD[c.fn])Object.assign(p,LAD[c.fn](rk));
+    else if(c.fn==='产出'){p.out=(GU_DB[n]||{}).mat||'通用蛊食';p.qty=1;p.cyc=2}
+    else if(c.fn==='状态'){p.debuff={label:guFnTxt(n)||'扰敌',mul:0.85,rounds:2}}
+    else if(c.fn==='推演'){p.inf=3}
+    else if(c.fn==='炼制'){p.ref=3}
+    else p.ins=Math.max(1,Math.floor(rk/2));
+    p.note=(p.note?p.note+'；':'')+'批147补全功能〔设计映射〕';
+  }
+})();
 function showModal(html,opts){$('#mbox').innerHTML=html;const m=$('#modal');m.classList.add('show');m.classList.toggle('battle',!!(opts&&opts.battle))} // 批49 U2：battle=true时全屏战斗态；其余弹窗缺省即时移除该态
 function hideModal(){const m=$('#modal');m.classList.remove('show');m.classList.remove('battle');setTimeout(presentPending,0)} // 批50：关闭后接手待呈现剧情/事件/排队弹窗
 // ---------- 批19扩展接口（只读状态 + 数据注册钩子；零行为变更，供后续模块增删不改核心架构） ----------
