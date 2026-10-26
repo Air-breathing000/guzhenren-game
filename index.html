@@ -2795,15 +2795,15 @@ function genAuctionLots(){
   for(let t=0;t<40&&lots.length<3;t++){
     const kind=pick(iml?['mat','gu','recipe','fact','longyu','ym']:['mat','recipe','gu','longyu']);
     if(kind==='mat'){
-      const pool=Object.keys(MAT_DB).filter(m=>MAT_DB[m].tier>=(iml?6:4)&&MAT_DB[m].cat!=='仙材'&&(MAT_DB[m].price||0)<100000);
+      const pool=Object.keys(MAT_DB).filter(m=>MAT_DB[m].tier>=(iml?6:4)&&(iml||MAT_DB[m].tier<6)&&MAT_DB[m].cat!=='仙材'&&(MAT_DB[m].price||0)<100000); // 批146：凡间拍卖不拍六转及以上材（锚95129）
       const m=pool.length?pick(pool):null;
       if(m)tryAdd({kind:'mat',name:m,base:Math.round((MAT_DB[m].price||500)*(iml?0.5:1)*prog),cur:iml?'xy':'stone',desc:CN(MAT_DB[m].tier)+'阶蛊材'});
     }else if(kind==='gu'){
-      const pool=Object.keys(GU_DB).filter(n=>GU_DB[n].rank>=(iml?6:4)&&!GU_DB[n].secret&&!S.gus.some(g=>g.name===n));
+      const pool=Object.keys(GU_DB).filter(n=>GU_DB[n].rank>=(iml?6:4)&&(!iml&&GU_DB[n].rank>=6?false:true)&&!GU_DB[n].secret&&!S.gus.some(g=>g.name===n)); // 批146：凡间拍卖不出仙蛊（锚98674「旁人就算有了也不会去贩卖」）
       const n=pool.length?pick(pool):null;
       if(n)tryAdd({kind:'gu',name:n,base:iml?imGuPrice(GU_DB[n].rank):Math.round(guBasePrice({name:n,rank:GU_DB[n].rank})*0.6),cur:iml?'xy':'stone',desc:CN(GU_DB[n].rank)+'转'+guFnTxt(n)+(GU_DB[n].rank>=6?'（仙蛊唯一，锚760）':'')}); // 批32B4：type废弃→guFnTxt；批98：起拍按新市价六成
     }else if(kind==='recipe'){
-      const pool=RECIPES.map((r,i)=>i).filter(i=>!S.recipes[RECIPES[i].name]&&!RECIPES[i].solo&&!RECIPES[i].rare); // 批42：孤本方不上拍卖（锚15473珍藏不流传）；批51A2：稀有仙蛊方不流通
+      const pool=RECIPES.map((r,i)=>i).filter(i=>!S.recipes[RECIPES[i].name]&&!RECIPES[i].solo&&!RECIPES[i].rare&&(iml||(RECIPES[i].rank||1)<6)); // 批146：凡间拍卖不出仙蛊方（锚95129蛊仙市场用仙元石买卖）
       if(pool.length){const i=pick(pool);const rv=RECIPES[i].val||20000;
         tryAdd({kind:'recipe',name:RECIPES[i].name,idx:i,base:Math.round((iml?rv/25:rv*1.2)*prog),cur:iml?'xy':'stone',desc:CN(RECIPES[i].rank)+'转蛊方'})}
     }else if(kind==='fact'&&isImmortal()){
@@ -6140,6 +6140,7 @@ function actRefine(idx,aux){
 // ③仙蛊屋炼制/推演槽（锚586仙蛊屋稳炉护料、142765监天塔推演）+10%
 // ④长毛炼道大阵（锚293635琅琊真传/293733「仙材和凡蛊的消耗暴涨了数十倍……仙蛊没有任何损耗」）：成功率+30%、蛊胚无虞、材料消耗×3
 // ⑤四元方悔血炼池（锚389672方源以悔池、炼炉、长毛炼道大阵融合一炉的炼道巅峰杰作）：蛊屋炼制槽+大阵+（悔池/炼炉）+四核心蛊（升炼/水炼/血本/悔，锚389694）齐备时激活——成功率按目标转数分档（yuanChance，批23用户裁决），失败材料回收90%-100%（几乎无损）；辅助三蛊早秋/中秋/晚秋为三秋黄鹤台宙道仙蛊（操控时序秋日，锚389694；用户批23考据修正），齐备且四元方激活时炼蛊耗时减半〔设计映射〕；四核心未齐则四元方未成、无融合加成
+function infFxOf(g){const p=(guClsOf(g.name)||{}).p||{};if(!p.inf)return 0;return Math.round(p.inf*(1+0.25*Math.max(0,(g.rank||1)-1)))} // 批146：推演加成随蛊虫转数增长（每转+25%〔设计映射〕——同蛊升转后加成不再固定不变，用户反馈）
 function auxAdd(school,aux,kind){ // 批29：school参数兼容数组（配方目标蛊可多流派）
   const out={ok:true,add:0,house:false,ym:false,yuan:false,gus:[],kms:[],note:'',refAdd:0,infAdd:0,must:false,mustUid:0,fast:0}; // 批32B4辅助蛊fn加成字段；批32C：mustUid消耗蛊
   if(!aux)return out;
@@ -6163,7 +6164,7 @@ function auxAdd(school,aux,kind){ // 批29：school参数兼容数组（配方�
       if(p.ref)out.refAdd+=p.ref;
       if(p.fast)out.fast=Math.max(out.fast,p.fast); // 寸光阴加速（锚137587）
     }
-    if(kind!=='refine'&&c.fn==='推演'&&p.inf)out.infAdd+=p.inf; // 推演蛊加成（B4设计映射梯度）
+    if(kind!=='refine'&&c.fn==='推演'&&p.inf)out.infAdd+=infFxOf(g); // 推演蛊加成（B4设计映射梯度）；批146：随蛊虫转数增长（每转+25%〔设计映射〕）
   }
   out.kms=(aux.kms||[]).filter(n=>S.km.some(k=>k.name===n)&&KILLMOVES[n]&&KILLMOVES[n].type===(kind==='refine'?'炼制':'推演'));
   out.add+=out.kms.reduce((s,n)=>s+(KILLMOVES[n].named?15:10),0);
@@ -6333,7 +6334,7 @@ function actInferRecipe(idx,aux){
   advanceDays(30,'推演「'+r.name+'」之方');
   if(!S.alive)return;
   if(!payAuxKms(A.kms))return;
-  if(A.gus.length||A.kms.length||A.house||A.infAdd)glog(`辅助催动：${[A.gus.length&&`蛊虫×${A.gus.length}（智道/同道催化，锚170899/131260）`,A.kms.length&&`杀招「${A.kms.join('」「')}」助益推算`,A.house&&'仙蛊屋推演槽（监天塔，锚142765）',A.infAdd&&`推演功能蛊+${A.infAdd}%（批32B4）`].filter(Boolean).join('、')}。${A.note}`);
+  if(A.gus.length||A.kms.length||A.house||A.infAdd)glog(`辅助催动：${[A.gus.length&&`蛊虫×${A.gus.length}（智道/同道催化，锚170899/131260）`,A.kms.length&&`杀招「${A.kms.join('」「')}」助益推算`,A.house&&'仙蛊屋推演槽（监天塔，锚142765）',A.infAdd&&`推演功能蛊+${A.infAdd}%（随蛊虫转数增长，批146）`].filter(Boolean).join('、')}。${A.note}`);
   const zhi=S.aperture&&typeof S.aperture==='object'&&S.aperture.rules.includes('r_zhi');
   const ch=clamp(45+attMaxOf(guSchoolArr(r.name))*8-r.rank*5+(zhi?15:0)+(schoolDh('智')?15*schoolPassive('智'):0)+(hasRule('r_meng')?10:0)+A.add+(A.infAdd||0),10,98); // 批144：目标方诸道造诣取最高
   if(R(1,100)<=ch){
@@ -8562,10 +8563,10 @@ function readAuxInfer(){
     house:!!document.querySelector('.iauxhouse:checked')};
 }
 // 辅助蛊虫勾选组（同道蛊虫催化，锚170899；非本命、未沉眠）
-function auxGuChks(prefix,gus,mode){ // 批142：mode='infer' 时标注全道通用/同道限定（用户反馈：并非所有蛊虫都能增幅推演）
+function auxGuChks(prefix,gus,mode){ // 批146：mode='infer' 时标注全道通用/同道限定与按转数折算后的实际加成
   return gus.map(g=>{
     let tag='（同道催化+3%）';
-    if(mode==='infer'){const gs=guSchoolArr(g.name);tag=(gs.includes('智')||((guClsOf(g.name).p||{}).inf))?'<span class="tag g">全道通用</span>':'<span class="dim">（限同道目标方生效）</span>'}
+    if(mode==='infer'){const gs=guSchoolArr(g.name);const fx=infFxOf(g);tag=(gs.includes('智')||((guClsOf(g.name).p||{}).inf))?(fx?`<span class="tag g">推演+${fx}%·全道通用</span>`:'<span class="tag g">全道通用</span>'):'<span class="dim">（限同道目标方生效）</span>'}
     return `<label style="font-size:var(--fs-s);display:block"><input type="checkbox" class="${prefix}" value="${g.uid}"> ${esc(g.name)}·${g.rank}转 ${tag}</label>`;
   }).join('')||'<span class="dim" style="font-size:var(--fs-s)">囊中暂无可用蛊虫</span>';
 }
@@ -8728,10 +8729,10 @@ function actExplore(deep){
         {label:'搜刮遗藏（元石与材料）',run:()=>{const g=Math.round(1500*prog*rankEconMul());const m=pick(rm.matPool||['月兰花','月光草']);S.stones+=g;S.mats[m]=(S.mats[m]||0)+3;glog(`你将遗迹扫荡一空——元石+${g}、「${m}」×3。`)}}]);
       return;
     }
-    if(e<(acc+=P.qy)){ // 盟友求援
-      glog('求援讯号自远处传来——有盟友被妖兽围困！');
-      exploreEventModal('盟友求援','远处传来蛊仙盟友的求援讯号——妖兽正围困其洞府（蛊仙交谊）。',[
-        {label:'驰援（战；胜：声望+15、同道仙材×1）',run:()=>{startBattle({name:'围困洞府的妖兽群',power:evPow()},(res)=>{if(res==='win'){S.rep+=15;S.mats['同道仙材']=(S.mats['同道仙材']||0)+1;glog('解围功成——盟友以同道仙材相赠，声望+15！','good')}})}},
+    if(e<(acc+=P.qy)){ // 盟友求援（批146重写：蛊仙遭荒兽级围困有锚134173先例，荒兽战力媲美六转锚123172；低转蛊师仅能在外围破局——锚77264/288442低转无资格正面抗荒兽；事后算酬锚178961；兽尸即仙材锚326432）
+      glog('求援讯号自远处传来——有蛊仙盟友被兽群围困！');
+      exploreEventModal('盟友求援','远处传来蛊仙盟友的求援讯号——一头荒兽亲率兽群围困其洞府！荒兽战力媲美六转蛊仙（锚123172），盟友被死死钳在护阵之内（锚134173六转蛊仙遭荒兽群撵逐之例）；兽潮外围却层层如浪，正向你这边涌来——正面搏荒兽非你所能（锚77264），撕开外围却是可为。',[
+        {label:'驰援破外围（战；胜：声望+15、同道仙材×1）',run:()=>{startBattle({name:'围困洞府的兽群外围',power:evPow()},(res)=>{if(res==='win'){S.rep+=15;S.mats['同道仙材']=(S.mats['同道仙材']||0)+1;glog('你自外围撕开兽潮，盟友得以脱身反杀荒兽——事后算酬（锚178961盟约互救），以同道仙材相赠（兽尸本是仙材之源，锚326432）：同道仙材×1、声望+15！','good')}})}},
         {label:'婉拒（声望-5）',run:()=>{S.rep-=5;glog('你婉拒了求援，江湖人情淡了几分。','warn')}}]);
       return;
     }
@@ -9514,14 +9515,15 @@ function genMarketFor(id){
   ['通用蛊食','花酒','痕石','蛊食精华','玉石','兽肉','知心草'].forEach(m=>{if(!pool.includes(m))pool.push(m)}); // 批53B：食性材料常备（玉石/兽肉/知心草）
   if(isImm)['同道仙材','窍核','洞天碎片','生灵幼崽','天然元泉','天气之息','地气之精','人气之魂'].forEach(m=>{if(!pool.includes(m))pool.push(m)});
   pool.forEach(m=>{if(!MAT_DB[m])return;
+    if(!isImm&&(MAT_DB[m].rank||0)>=6)return; // 批146：六转及以上材不进凡市（锚95129蛊仙市场以仙元石买卖；北原飞熊血肉/东海龙鱼鱼类六转材归仙市）
     const mmp=(!isImm&&MAT_DB[m]&&(MAT_DB[m].tier||1)<=5)?mktProg():1; // 批48C F2：凡材(t1-5)集市购入价×mktProg（锚60726行情联动）；仙材(t6+)走仙元石体系不动
     const price=(MAT_DB[m].price||5)*(isImm?1/40:1)*pm*mmp;
     if(Math.random()<(isImm?0.6:0.55))stock.push({kind:'mat',name:m,price:Math.max(1,Math.round(price)),qty:R(1,isImm?3:8)});
   });
-  if(!isImm)['天气之息','地气之精','人气之魂'].forEach(m=>{if(Math.random()<0.4)stock.push({kind:'mat',name:m,price:Math.round(400*pm),qty:1})});
+  if(!isImm)['天气之息','地气之精','人气之魂'].forEach(m=>{if(Math.random()<0.4)stock.push({kind:'mat',name:m,price:Math.round(400*pm),qty:1})}); // 批146复核保留：三天材乃凡蛊方（星门蛊锚84852等）原料，非仙材kind，刻意凡市定价供凡人可及；仙材kind仍仙市独占
   // 批72A：通用蛊食/仙材按玩家转数上架（每市 3~5 种，避免 270 条刷屏；具体食性可从buyMissingFood代购）
   {const gr=Math.max(1,Math.min(9,S.realm.rank||1));
-   const gen=Object.keys(MAT_DB).filter(m=>{const d=MAT_DB[m];return d.generic&&(d.kind==='蛊食'||(isImm&&d.kind==='仙材'))&&d.rank>=Math.max(1,gr-1)&&d.rank<=Math.min(9,gr+1)});
+   const gen=Object.keys(MAT_DB).filter(m=>{const d=MAT_DB[m];return d.generic&&(d.kind==='蛊食'||(isImm&&d.kind==='仙材'))&&d.rank>=Math.max(1,gr-1)&&d.rank<=Math.min(9,gr+1)&&(!isImm&&d.kind==='蛊食'?d.rank<=5:true)}); // 批146：凡市蛊食封顶五转（六转+食料归仙市，锚95129）
    for(const m of gen.sort(()=>Math.random()-0.5).slice(0,4)){const d=MAT_DB[m];const mmp=(!isImm&&d.tier<=5)?mktProg():1;stock.push({kind:'mat',name:m,price:Math.max(1,Math.round((d.price||5)*(isImm?1/40:1)*pm*mmp)),qty:R(1,isImm?3:8)})}}
   // 批72B：具名仙材在仙市少量流通（每市随机4种，价按MAT_DB基价折算仙元石）
   if(isImm){const namedImm=['乌青墨石','芙蓉石钟乳','阴柔丝','恨水石','流光果','无常石','内景雨','云梯木','清风草茎','天晶','宙极根','斑斓霸王花','暗流金钢','苍玄铜','升龙铜','霸铜','雪莲花精','阎黄水','石心液','登云梯叶心','地极天罡珠','气功果','扶桑树枝','六头大蛇黑血','白莲巨蚕血肉','地脉精华','笑石','山气','水气','云龙鳞','风镰鸟眼珠','丹青香','炎鸿石','逆流河水','太泽花雾','光阴河水','暗星海带','刺脊星龙鱼肉','重金','飞熊血肉','龙鱼肉','珠线水','白天飞尘','天残犬粪','战场白骨','幽冥水母','深海闪电鳗鱼','黑油','云凰碎片','地极天罡','电解铁星花','云泥','亮睛花','胜算草'];
@@ -11183,6 +11185,10 @@ function tabMarket(){
   const all=Object.keys(MARKET_NODES);
   const canVisit=id=>{const nn=MARKET_NODES[id];if(!nn)return false;if(nn.gate>=6&&!isImmortal())return false;if(nn.region!=='any'&&nn.region!==reg)return false;return true};
   if(!S.mkt||!canVisit(S.mkt))S.mkt=(all.find(canVisit))||nodeDefaultForRegion(reg);
+  if(UIF.mktLast!==S.mkt){ // 批146：切市键控重置——覆盖一切换市路径（点击/区域变动后canVisit静默回退），旧市筛选残留与滚动位不再带入新市
+    UIF.mktLast=S.mkt;UIF.mktQ='';UIF.mktK='';UIF.mktAff=false;UIF.mktS='';
+    try{window.scrollTo({top:0,behavior:'auto'})}catch(e){}
+  }
   const cur=S.mkt,n=MARKET_NODES[cur];
   const stObj=marketState(cur)&&S.markets[cur];
   const stockRows=(stObj?stObj.stock:[]).map((it,i)=>{
@@ -12101,7 +12107,7 @@ document.querySelectorAll('[data-kmauto]').forEach(b=>b.onclick=()=>{const n=b.d
   document.querySelectorAll('[data-nianuse]').forEach(b=>b.onclick=()=>actNianGuUse(b.dataset.nianuse)); // 批142：年蛊开采年份
   document.querySelectorAll('[data-guup]').forEach(b=>b.onclick=()=>showGuUpgrade(+b.dataset.guup));
   document.querySelectorAll('[data-gushl]').forEach(b=>b.onclick=()=>showGuShenglian(+b.dataset.gushl)); // 批30：升炼弹窗
-  document.querySelectorAll('[data-node]').forEach(b=>b.onclick=()=>{S.mkt=b.dataset.node;UIF.mktQ='';UIF.mktK='';UIF.mktAff=false;UIF.mktS='';render()}); // 批142：切市重置筛选/排序（旧市关键词残留会把新市货架滤空，用户反馈）
+  document.querySelectorAll('[data-node]').forEach(b=>b.onclick=()=>{S.mkt=b.dataset.node;render()}); // 批142/146：筛选重置改由 tabMarket 键控（UIF.mktLast）统一处理，覆盖静默回退路径
   document.querySelectorAll('[data-explorebatch]').forEach(b=>b.onclick=()=>{const el=$('#expN');const n=Math.max(2,Math.min(10,+((el&&el.value)||3)||3));UIF.expN=n;actExploreBatch(n)}); // 批101：连续探索
   document.querySelectorAll('[data-immauct]').forEach(b=>b.onclick=()=>openImmAuction()); // 批100：宝黄天仙蛊专场
   document.querySelectorAll('[data-packout]').forEach(b=>b.onclick=()=>packOut(b.dataset.packout,+b.dataset.packn||1)); // 批100：蛊群散出
