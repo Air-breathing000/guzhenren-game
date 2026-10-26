@@ -1204,6 +1204,12 @@ const GU_DIET={
  '白玉蛊':{type:'金石',mat:'玉石',cycle:20,qty:8,unit:'两',cost:2,anchor:'15691/15693'}, // 每二十天八两玉石
  '白豕蛊':{type:'血肉',mat:'猪肉',cycle:5,qty:1,unit:'份',cost:1,anchor:'9746/9748/15689/10514'}, // 食猪肉；豕蛊系列皆食猪肉（锚9746/9748），野猪杂食（锚10514）
  '竹君子':{type:'真诚',mat:null,cycle:30,qty:1,special:'truth',cost:0,anchor:'8621/8661'}, // 以真诚为食，至诚君子方可炼化喂养
+ '一年蛊':{type:'光阴',mat:null,cycle:30,qty:0,special:'time',cost:0,anchor:'210325「它的食料和春秋蝉一样，都是光阴长河的河水」'},
+ '两年蛊':{type:'光阴',mat:null,cycle:30,qty:0,special:'time',cost:0,anchor:'210325'},
+ '五年蛊':{type:'光阴',mat:null,cycle:30,qty:0,special:'time',cost:0,anchor:'210325'},
+ '十年蛊':{type:'光阴',mat:null,cycle:30,qty:0,special:'time',cost:0,anchor:'210325'},
+ '百年蛊':{type:'光阴',mat:null,cycle:30,qty:0,special:'time',cost:0,anchor:'210325'},
+ '千年蛊':{type:'光阴',mat:null,cycle:30,qty:0,special:'time',cost:0,anchor:'210325'},
  '慧剑仙蛊':{type:'花蜜',mat:'斑斓霸王花',cycle:90,qty:1,unit:'朵',cost:1,anchor:'200670'}, // 批72B：慧剑仙蛊食料＝斑斓霸王花（锚200670），每朵覆盖千里
  '净魂仙蛊':{type:'血肉',mat:'白莲巨蚕血肉',cycle:90,qty:1,unit:'份',cost:1,anchor:'124775'}, // 批72B：须上万头白莲巨蚕蛊血肉（锚124775）
  '招灾仙蛊':{type:'血肉',mat:'六头大蛇黑血',cycle:90,qty:1,unit:'份',cost:1,anchor:'124767'}, // 批72B：荒兽六头大蛇的黑色血液（锚124767）
@@ -1228,6 +1234,7 @@ function dietOf(name){
 function dietTxt(name){
   const d=dietOf(name);
   if(d.special==='truth')return '真诚 · 至诚君子方可喂养（锚8621/8661）';
+  if(d.special==='time')return '光阴 · 食光阴长河之水，常人无虑喂养（锚210325·批142）';
   const day=d.cycle<=1?'每日':`每${d.cycle}日`;
   return `${d.type} · ${day}${d.qty}${d.unit||'份'}${d.mat?`（${d.mat}）`:''}${d.aux?` · 辅料：${d.aux}`:''}`;
 }
@@ -1239,11 +1246,12 @@ function feedReqTxt(name){
 function dietDecayMul(g){
   const d=dietOf(g.name);
   if(d.special==='truth')return 0.5;
+  if(d.special==='time')return 0; // 批142：年蛊食光阴长河之水，不愁喂养（锚210325）
   return d.cycle<=1?1.6:(d.cycle<=7?1.25:(d.cycle<=15?1.0:(d.cycle<=30?0.85:0.6)));
 }
 function feedPlan(g){
   const d=dietOf(g.name);
-  if(d.special==='truth')return {special:true,mat:null,qty:0,aux:null,gain:40};
+  if(d.special)return {special:true,mat:null,qty:0,aux:null,gain:40}; // 批142：time类年蛊同免喂养（锚210325）
   let qty=d.cost||1,aux=null;
   if(d.aux&&(S.mats[d.aux]||0)>0){qty=Math.max(1,Math.ceil(qty*(1-(d.auxCut||0.5))));aux=d.aux}
   let mat=d.mat; // 批72A：旧档兜底——仅通用蛊食断货时可用旧存「通用蛊食」替代；具名食性（斑斓霸王花/月兰花等）不兜底
@@ -1280,7 +1288,6 @@ const GU_UP={
  '骨枪蛊':{from:'月光蛊',aux:{'小光蛊':1},mats:{'骨刺':4},base:60,anchor:'设计映射'},
  '狼魂蛊':{from:'骨枪蛊',aux:{'驭犬蛊':1},mats:{'狼皮':4,'兽王血':1},base:52,anchor:'设计映射'}, // 批25：血颅蛊修正4转，改道2转骨枪蛊维持+1升转阶梯
  '血月蛊':{from:'鬼火蛊',aux:{'月痕蛊':1},mats:{'月兰花':8,'兽王血':1},base:50,anchor:'设计映射'}, // 批25改道同上
- '碧空蛊':{from:'纸鹤蛊',aux:{'旋风蛊':1},mats:{'碧磷粉':2},base:52,anchor:'设计映射'},
  '星芽蛊':{from:'月光蛊',aux:{'玉皮蛊':1},mats:{'生骨肉':3,'月兰花':4},base:52,anchor:'设计映射'},
  '百年木魅':{from:'木魅蛊',aux:{},mats:{'百年寿蛊':1},base:70,anchor:'20509',note:'批40：木魅蛊与百年寿蛊合炼晋升四转——「这个合炼的秘方，众所皆知，流传极广。皆因寿蛊更加珍贵，寻到了寿蛊，通常蛊师都是直接用了」（锚20509直证）——寿蛊入炼是罕见的克制抉择'},
  '千年木魅':{from:'百年木魅',aux:{},mats:{'千年寿蛊':1},base:60,anchor:'20509',note:'批40：百年木魅再和千年寿蛊合炼，成为五转千年木魅（锚20509直证）'},
@@ -1288,22 +1295,18 @@ const GU_UP={
  // —— 基础低转蛊之培育路线（〔设计映射〕，保证全部蛊虫皆有升转出口）——
  '敛息蛊':{from:'小光蛊',aux:{},mats:{'月光草':3},base:70,anchor:'设计映射'},
  '驭犬蛊':{from:'白豕蛊',aux:{},mats:{'狼皮':2,'通用蛊食':3},base:70,anchor:'设计映射'},
- '定星蛊':{from:'痕石蛊',aux:{},mats:{'痕石':3},base:66,anchor:'设计映射'},
+ // 批142修：删除定星蛊←痕石蛊路线（跨四转·定星蛊有直接方）
  '痕石蛊':{from:'月光蛊',aux:{},mats:{'痕石':2},base:70,anchor:'设计映射'},
  '旋风蛊':{from:'纸鹤蛊',aux:{},mats:{'月光草':2},base:70,anchor:'设计映射'},
  '青丝蛊':{from:'月光蛊',aux:{'小光蛊':1},mats:{'通用蛊食':3},base:50,anchor:'6749一转防御〔设计映射材料〕'}, // 批29：原文青丝蛊实装（黑鬃合炼原料，锚6751）；万念蛊培育方删除（原文万念剑瀑核心=慧剑仙蛊，锚340384）
  // —— 批16新增核心蛊之培育出口（〔设计映射〕保证全部蛊虫皆有升转出口）——
- '三头蛊':{from:'铁骨蛊',aux:{'金罡蛊':1},mats:{'玄铁砂':4,'生骨肉':2},base:48,anchor:'设计映射'},
  '血袍蛊':{from:'水罩蛊',aux:{'水罩蛊':1},mats:{'血纹草':3},base:52,anchor:'设计映射'}, // 批25改道：血颅蛊修正4转后原from降级，改2转水罩蛊
  '星甲蛊':{from:'月痕蛊',aux:{},mats:{'痕石':4},base:52,anchor:'设计映射'}, // 批38A-3同构处理：from定星→月痕（定星r5直证后降转·月痕r2→星甲r3恢复+1阶梯·星月同源承接·用户裁决Q3）
  // 批38A-3同构处理：远目蛊升炼出口撤除改直接培育（星道无r1源·敛息r3直证后降转·用户裁决Q3）
  '三息蛊':{from:'旋风蛊',aux:{},mats:{'寒潭水':2},base:60,anchor:'设计映射'},
  // 批38A-2收口：血虹蛊升炼出口撤除（用户裁决选项1）——金罡r3直证（锚55295）后血道内无r1/r2源可+1阶梯，血虹改直接培育方（血道最低转r3·与血袍/血月同基础档）
  // 批29新增凡蛊培育出口（金/雷道，材料〔设计映射〕）
- '金龙蛊':{from:'铁骨蛊',aux:{'金罡蛊':1},mats:{'金蚕丝':3,'玄铁砂':2},base:48,anchor:'70306金道四转精品〔设计映射材料〕'},
- '金风送爽蛊':{from:'旋风蛊',aux:{},mats:{'金蚕丝':2,'月兰花':3},base:50,anchor:'70306〔设计映射材料〕'},
  '金缕衣蛊':{from:'水罩蛊',aux:{'金霞蛊':1},mats:{'金蚕丝':3,'铁骨花':2},base:50,anchor:'70306〔设计映射材料〕'},
- '金霞蛊':{from:'小光蛊',aux:{},mats:{'金蚕丝':2,'月光草':3},base:50,anchor:'70306〔设计映射材料〕'},
  '金雄狮毛蛊':{from:'金缕衣蛊',aux:{'钢鬃蛊':1},mats:{'金蚕丝':4,'玄铁砂':3},base:48,anchor:'131345五转防御〔设计映射材料〕'},
  '炸雷蛊':{from:'单刀蛊',aux:{},mats:{'玄铁砂':3},base:55,anchor:'25057/65712三转轰击〔设计映射材料〕'},
  '雷翼蛊':{from:'旋风蛊',aux:{'炸雷蛊':1},mats:{'青藤蔓':2,'玄铁砂':2},base:55,anchor:'26794/28064三转飞翔〔设计映射材料〕'},
@@ -1311,14 +1314,10 @@ const GU_UP={
  '雷啸蛊':{from:'炸雷蛊',aux:{'雷翼蛊':1},mats:{'玄铁砂':3},base:52,anchor:'25139狂电狼寄居音波杀敌〔设计映射材料〕'}, // 批29二轮：雷啸蛊补录出口
  // 批38A-3同构处理（用户裁决Q3）：蛟系四蛊+解梦蛊升炼出口全部撤除改直接培育——蛟系依锚224413「从剑蛟尸躯炼出」统一口径（原挂链玉皮r2/骨枪r2同转、定星r5降转、铁骨r1+1杂糅失阶）；解梦蛊智道无r2源（定星r5降转）同撤
  // '百年蛊'旧出口（from四味酒虫）批32B2删除——年蛊体系改年蛊链（十年蛊→百年蛊，锚210308）；'四味酒虫'仍为酒虫系链节点
- '安居蛊':{from:'白豕蛊',aux:{'天蓬蛊':1},mats:{'青藤蔓':4,'蛊食精华':2},base:48,anchor:'设计映射'}, // 批36D：from原木鸡蛊——木鸡蛊升转六转仙蛊（用户裁决），凡蛊升炼路线改接白豕蛊〔设计映射〕
  '万星蛊':{from:'星甲蛊',aux:{'星芽蛊':1},mats:{'痕石':6,'月兰花':6},base:46,anchor:'设计映射（万星飞萤核心，锚149673）'}, // 批38A-3同构处理：from定星→星甲（星甲r3→万星r4恢复+1阶梯·星道承接·用户裁决Q3）
  '剑影蛊':{from:'单刀蛊',aux:{'月芒蛊':1},mats:{'玄铁砂':3},base:55,anchor:'设计映射'}, // 批26：浪剑蛊/飞剑蛊已校准七转仙蛊（锚182765/190527），凡蛊培育出口改为剑影/刀光
  '刀光蛊':{from:'单刀蛊',aux:{'骨枪蛊':1},mats:{'玄铁砂':3},base:55,anchor:'设计映射'},
  // —— 批15新增（四大移动蛊系培育出口〔设计映射〕，锚56640）——
- '入梦游蛊':{from:'纸鹤蛊',aux:{'旋风蛊':2},mats:{'寒潭水':3,'月光草':2},base:40,anchor:'设计映射（移动系，锚56640）'}, // 批26：碧空蛊改五转毒蛊后移出辅助位
- '逍遥游蛊':{from:'纸鹤蛊',aux:{'旋风蛊':1,'小光蛊':1},mats:{'青藤蔓':4,'月光草':2},base:40,anchor:'设计映射（移动系，锚56640）'},
- '酒神游蛊':{from:'四味酒虫',aux:{},mats:{'花酒':6,'青藤蔓':2},base:42,anchor:'设计映射（酒系，锚56640）'},
  '梦枕蛊':{from:'梦魂蛊',aux:{},mats:{'月光草':4,'蛊食精华':4},base:40,anchor:'301309凤金煌炼五转梦枕蛊〔设计映射材料〕'}
  // —— 批26新增（凡蛊培育出口，~45条设计映射；仙蛊不入凡蛊链，获取走仙蛊方/剧情/宝黄天）——
  // 力道
@@ -1353,7 +1352,6 @@ const GU_UP={
  ,'黑鬃蛊':{from:'青丝蛊',aux:{'黑豕蛊':1},mats:{'通用蛊食':4},base:62,anchor:'6751',note:'一转青丝蛊与一转黑豕蛊合并精炼晋升二转黑鬃蛊（锚6751/9664；批29青丝蛊已实装，由通用蛊食替代改为原文合炼链）'}
  ,'钢鬃蛊':{from:'黑鬃蛊',aux:{},mats:{'通用蛊食':6,'玄铁砂':2},base:55,anchor:'6755/9664',note:'黑鬃蛊再晋升三转钢鬃蛊，毛发硬如钢针攻防一体（锚9668）'}
  ,'书虫':{from:'痕石蛊',aux:{},mats:{'通用蛊食':4},base:58,anchor:'设计映射'}
- ,'竹君子':{from:'书虫',aux:{},mats:{'青藤蔓':6,'蛊食精华':2},base:50,anchor:'设计映射'}
  ,'寸光阴蛊':{from:'纸鹤蛊',aux:{},mats:{'月光草':6},base:52,anchor:'设计映射'}
  // 血道
  ,'血狂蛊':{from:'血袍蛊',aux:{},mats:{'血纹草':4},base:52,anchor:'设计映射'}
@@ -1376,7 +1374,6 @@ const GU_UP={
  ,'驭狼蛊':{from:'驭犬蛊',aux:{},mats:{'狼皮':2,'通用蛊食':2},base:56,anchor:'设计映射'}
  ,'驭狐蛊':{from:'驭犬蛊',aux:{},mats:{'通用蛊食':4,'月兰花':2},base:56,anchor:'设计映射'}
  ,'驭鹤蛊':{from:'驭狼蛊',aux:{'旋风蛊':1},mats:{'通用蛊食':4},base:52,anchor:'设计映射'}
- ,'千里地狼蛛':{from:'驭狼蛊',aux:{'驭狐蛊':1},mats:{'蛊食精华':3},base:48,anchor:'设计映射'}
  ,'山丘巨傀蛊':{from:'千里地狼蛛',aux:{'铁骨蛊':1},mats:{'蛊食精华':4},base:46,anchor:'设计映射'}
  ,'白相仙蛇蛊':{from:'千里地狼蛛',aux:{'驭鹤蛊':1},mats:{'蛊食精华':4,'通用蛊食':4},base:44,anchor:'设计映射'}
  // 土道/梦道/毒道/信道
@@ -1387,7 +1384,7 @@ const GU_UP={
 
  ,'传信蛊':{from:'信虫',aux:{},mats:{'通用蛊食':4},base:60,anchor:'设计映射'}
  ,'信鸽蛊':{from:'传信蛊',aux:{},mats:{'通用蛊食':4,'月光草':2},base:54,anchor:'设计映射'}
- ,'星眸仙蛊':{from:'小光蛊',aux:{'定星蛊':2},mats:{'痕石':6,'月兰花':6},base:40,anchor:'设计映射（七转仙蛊锚313544）'}
+ ,'星眸仙蛊':{from:'定星蛊',aux:{},mats:{'痕石':6,'月兰花':6,'同道仙材':4},base:40,anchor:'设计映射（七转仙蛊锚313544）'} // 批142：主料小光蛊→定星蛊（五转星道·目视系同源）
  // —— 批30：小吃→大吃升转链（原文锚276551「将小吃仙蛊提炼到七转大吃，再改良吃力杀招」）——
  ,'大吃':{from:'小吃仙蛊',aux:{},mats:{'同道仙材':3},xy:{g:7,n:10},base:25,days:60,anchor:'276551',note:'小吃仙蛊提炼晋升七转大吃；仙蛊阶段升炼耗同级仙元与仙材、无需元泉（锚265节）〔设计映射〕；七转大吃改良吃力杀招，力道道痕增长质的提升（锚276551）'}
  // —— 批74：仙蛊升转/升炼出口（用户裁决：低转蛊可升炼为高转蛊，同名仙蛊即同一蛊不同时期）——
@@ -1737,7 +1734,7 @@ const RECIPES=[
  ,{name:'一年蛊',rank:1,mats:{'通用蛊食':3},need:0,val:1500}
  ,{name:'两年蛊',rank:2,mats:{'通用蛊食':3},need:1,val:3000,upFrom:'一年蛊'}
  ,{name:'五年蛊',rank:3,mats:{'通用蛊食':4},need:2,val:10000,upFrom:'两年蛊'}
- ,{name:'十年蛊',rank:6,mats:{'同道仙材':1},need:5,val:1000000,upFrom:'五年蛊'}
+ ,{name:'十年蛊',rank:6,mats:{'同道仙材':1},need:5,val:1000000,upFrom:'五年蛊'} // 年蛊升至六转即成仙蛊、六转年蛊最少十年（锚210304/210305·凡→仙升炼为原著机制；材料〔设计映射〕）
  ,{name:'百年蛊',rank:7,mats:{'同道仙材':2},need:6,val:3000000,upFrom:'十年蛊'} // 年蛊体系七转（锚210309，原方upFrom四味酒虫删除）
  ,{name:'千年蛊',rank:8,mats:{'同道仙材':3},need:7,val:9000000,upFrom:'百年蛊'}
  ,{name:'炸雷蛊',rank:3,mats:{'玄铁砂':3},need:2,val:10000,upFrom:'单刀蛊'}
@@ -1757,37 +1754,37 @@ const RECIPES=[
  ,{name:'地藏花王蛊',rank:3,mats:{'青藤蔓':6},need:2,val:10000,upFrom:'地藏花蛊'}
  // 批37A：烂肠蛊方删除（虚构蛊·用户批37裁决Q1）
  ,{name:'信鸽蛊',rank:3,mats:{'通用蛊食':4,'月光草':2},need:2,val:10000,upFrom:'传信蛊'}
- ,{name:'三头蛊',rank:4,mats:{'玄铁砂':4,'生骨肉':2},need:3,val:25000,upFrom:'铁骨蛊'}
- ,{name:'金龙蛊',rank:4,mats:{'金蚕丝':3,'玄铁砂':2},need:3,val:25000,upFrom:'铁骨蛊'}
- ,{name:'金风送爽蛊',rank:4,mats:{'金蚕丝':2,'月兰花':3},need:3,val:25000,upFrom:'旋风蛊'}
+ ,{name:'三头蛊',rank:4,mats:{'玄铁砂':4,'生骨肉':2},need:3,val:25000}
+ ,{name:'金龙蛊',rank:4,mats:{'金蚕丝':3,'玄铁砂':2},need:3,val:25000}
+ ,{name:'金风送爽蛊',rank:4,mats:{'金蚕丝':2,'月兰花':3},need:3,val:25000}
  ,{name:'金缕衣蛊',rank:4,mats:{'金蚕丝':3,'铁骨花':2},need:3,val:25000,upFrom:'水罩蛊'}
- ,{name:'金霞蛊',rank:4,mats:{'金蚕丝':2,'月光草':3},need:3,val:25000,upFrom:'小光蛊'}
+ ,{name:'金霞蛊',rank:4,mats:{'金蚕丝':2,'月光草':3},need:3,val:25000}
  ,{name:'黄骆天牛蛊',rank:4,mats:{'蛊食精华':3},need:3,val:25000,upFrom:'蛮力天牛蛊'}
  ,{name:'十钧之力蛊',rank:4,mats:{'蛊食精华':3},need:3,val:25000,upFrom:'蓄力蛊'}
  ,{name:'苦力蛊',rank:4,mats:{'蛊食精华':4},need:3,val:25000,upFrom:'惯力蛊'}
  ,{name:'费力蛊',rank:4,mats:{'蛊食精华':5},need:3,val:25000,upFrom:'苦力蛊'}
- ,{name:'安居蛊',rank:4,mats:{'青藤蔓':4,'蛊食精华':2},need:3,val:25000,upFrom:'白豕蛊'} // 批36D：upFrom原木鸡蛊——升转仙蛊后改接白豕蛊〔设计映射〕
+ ,{name:'安居蛊',rank:4,mats:{'青藤蔓':4,'蛊食精华':2},need:3,val:25000} // 批36D：upFrom原木鸡蛊——升转仙蛊后改接白豕蛊〔设计映射〕
  ,{name:'万星蛊',rank:4,mats:{'痕石':6,'月兰花':6},need:3,val:25000,upFrom:'星甲蛊'} // 批38A-3同构处理：upFrom定星→星甲同步（用户裁决Q3）
  ,{name:'水幕天华蛊',rank:4,mats:{'寒潭水':6,'蛊食精华':2},need:3,val:25000,upFrom:'水罩蛊'}
  ,{name:'梦魂蛊',rank:4,mats:{'蛊食精华':3},need:3,val:25000,upFrom:'葬魂蟾'}
  // 批37A：蚀骨蛊方删除（虚构蛊·用户批37裁决Q1）
  ,{name:'金雄狮毛蛊',rank:5,mats:{'金蚕丝':4,'玄铁砂':3},need:4,val:60000,upFrom:'金缕衣蛊'}
  ,{name:'雷锤蛊',rank:5,mats:{'玄铁砂':4,'铁骨花':3},need:4,val:60000,upFrom:'炸雷蛊'}
- ,{name:'入梦游蛊',rank:5,mats:{'寒潭水':3,'月光草':2},need:4,val:60000,upFrom:'纸鹤蛊'}
- ,{name:'逍遥游蛊',rank:5,mats:{'青藤蔓':4,'月光草':2},need:4,val:60000,upFrom:'纸鹤蛊'}
- ,{name:'酒神游蛊',rank:5,mats:{'花酒':6,'青藤蔓':2},need:4,val:60000,upFrom:'四味酒虫'}
+ ,{name:'入梦游蛊',rank:5,mats:{'寒潭水':3,'月光草':2},need:4,val:60000}
+ ,{name:'逍遥游蛊',rank:5,mats:{'青藤蔓':4,'月光草':2},need:4,val:60000}
+ ,{name:'酒神游蛊',rank:5,mats:{'花酒':6,'青藤蔓':2},need:4,val:60000}
  ,{name:'借力蛊',rank:5,mats:{'蛊食精华':4},need:4,val:60000,upFrom:'惯力蛊'}
  ,{name:'群力蛊',rank:5,mats:{'蛊食精华':4,'通用蛊食':4},need:4,val:60000,upFrom:'惯力蛊'}
  ,{name:'乌七蛊',rank:5,mats:{'蛊食精华':4},need:4,val:60000,upFrom:'金背狼皮蛊'}
  ,{name:'炼精化神蛊',rank:5,mats:{'蛊食精华':4},need:4,val:60000,upFrom:'胆识蛊'}
  ,{name:'潜魂兽衣蛊',rank:5,mats:{'狼皮':4,'蛊食精华':2},need:4,val:60000,upFrom:'天青狼皮蛊'}
  ,{name:'百战不殆蛊',rank:5,mats:{'蛊食精华':4},need:4,val:60000,upFrom:'匠人蛊'}
- ,{name:'千里地狼蛛',rank:5,mats:{'蛊食精华':3},need:4,val:60000,upFrom:'驭狼蛊'}
+ ,{name:'千里地狼蛛',rank:5,mats:{'蛊食精华':3},need:4,val:60000}
  ,{name:'山丘巨傀蛊',rank:5,mats:{'蛊食精华':4},need:4,val:60000,upFrom:'千里地狼蛛'}
  ,{name:'白相仙蛇蛊',rank:5,mats:{'蛊食精华':4,'通用蛊食':4},need:4,val:60000,upFrom:'千里地狼蛛'}
  ,{name:'酒囊花蛊',rank:2,mats:{'花酒':4},need:1,val:3000,upFrom:'饭袋草蛊'} // 酒虫材料系（锚2121）
  ,{name:'书虫',rank:1,mats:{'通用蛊食':4},need:0,val:800,upFrom:'痕石蛊'}
- ,{name:'竹君子',rank:4,mats:{'青藤蔓':6,'蛊食精华':2},need:3,val:25000,upFrom:'书虫'}
+ ,{name:'竹君子',rank:4,mats:{'青藤蔓':6,'蛊食精华':2},need:3,val:25000}
   ,{name:'梦枕蛊',rank:5,mats:{'月光草':4,'蛊食精华':4},need:4,val:60000,upFrom:'梦魂蛊'} // 批34E补方：五转凡蛊（锚301309〔设计映射材料〕）
  ,{name:'寸光阴蛊',rank:3,mats:{'月光草':6},need:2,val:10000,upFrom:'纸鹤蛊'}
  ,{name:'血狂蛊',rank:3,mats:{'血纹草':4},need:2,val:10000,upFrom:'血袍蛊'}
@@ -1795,7 +1792,7 @@ const RECIPES=[
  ,{name:'血滴子',rank:5,mats:{'兽王血':2,'血纹草':4},need:4,val:60000,upFrom:'血颅蛊'} // 批38A-2收口：upFrom至亲→血颅同步（用户裁决选项1）
  ,{name:'血河蟒',rank:5,mats:{'兽王血':2,'蛊食精华':3},need:4,val:60000,upFrom:'血狂蛊'}
  ,{name:'血幕天华蛊',rank:5,mats:{'血纹草':6,'蛊食精华':3},need:4,val:60000,upFrom:'血颅蛊'} // 批38A-2收口：upFrom至亲→血颅同步（用户裁决选项1）
- ,{name:'星眸仙蛊',rank:7,mats:{'痕石':6,'月兰花':6},need:6,val:1000000,upFrom:'小光蛊'} // 七转仙蛊（锚313544），材料沿用GU_UP〔设计映射〕
+ ,{name:'星眸仙蛊',rank:7,mats:{'痕石':6,'月兰花':6,'同道仙材':4},need:6,val:1000000,upFrom:'定星蛊'} // 批142：主料小光蛊(一转)→定星蛊(五转星道·目视系同源)；仙蛊主料须五转档（锚106/408） // 七转仙蛊（锚313544），材料沿用GU_UP〔设计映射〕
   ,{name:'月痕蛊',rank:2,mats:{'痕石':4},need:1,val:2500,upFrom:'月光蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线·锚106〔设计映射〕
   ,{name:'月霓裳',rank:2,mats:{'月光草':6},need:1,val:2500,upFrom:'月光蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线·锚98/106〔设计映射〕
   ,{name:'天蓬蛊',rank:3,mats:{'雪獠牙':2,'玄铁砂':4,'通用蛊食':6},need:2,val:8000,upFrom:'白玉蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线·锚64〔设计映射〕
@@ -1810,13 +1807,13 @@ const RECIPES=[
   ,{name:'骨枪蛊',rank:2,mats:{'骨刺':4},need:1,val:2500,upFrom:'月光蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕
   ,{name:'狼魂蛊',rank:3,mats:{'狼皮':4,'兽王血':1},need:2,val:8000,upFrom:'骨枪蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕
   ,{name:'血月蛊',rank:3,mats:{'月兰花':8,'兽王血':1},need:2,val:8000,upFrom:'鬼火蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕
-  ,{name:'碧空蛊',rank:5,mats:{'碧磷粉':2},need:4,val:60000,upFrom:'纸鹤蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕
+  // 批142修：删除碧空蛊upFrom方（跨四转·直接方在上方，锚71730）
   ,{name:'星芽蛊',rank:3,mats:{'生骨肉':3,'月兰花':4},need:2,val:8000,upFrom:'月光蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕
   ,{name:'全力以赴蛊',rank:3,mats:{'金蚕丝':2},need:2,val:8000,upFrom:'花豕蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕；批38A-3同构处理：upFrom惯力→花豕同步（用户裁决Q3）
   // 批132修复：删除「小光蛊·升炼方」（原月光蛊为主料+月兰花×3+月光草×1）——GU_UP并无小光蛊升炼路线，该方在方术页恒灰、蛊虫页亦无从发起，纯死条目徒增困惑；小光蛊唯一炼制途径=直接方（月兰花×3+月光草×2）
   ,{name:'敛息蛊',rank:3,mats:{'月光草':3},need:2,val:8000,upFrom:'小光蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕
   ,{name:'驭犬蛊',rank:1,mats:{'狼皮':2,'通用蛊食':3},need:0,val:800,upFrom:'白豕蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕
-  ,{name:'定星蛊',rank:5,mats:{'痕石':3},need:4,val:60000,upFrom:'痕石蛊'} // 批34E补方（遗留项清欠）：材料沿用GU_UP路线〔设计映射〕
+  // 批142修：删除定星蛊upFrom方（跨四转·直接方在上方）
   // —— 批51A1 空间与移动蛊方（材料〔设计映射·原著未载配方单〕；仙蛊方只可推演/秘境/拍卖，不进凡市）——
   ,{name:'洞地蛊',rank:5,mats:{'金石髓':2,'痕石':4},need:4,val:60000}
   ,{name:'星门蛊',rank:5,mats:{'痕石':6,'天气之息':2},need:4,val:120000} // 材料稀缺、上古蛊虫为辅料、成功率极低（锚84852-84854）
@@ -3881,12 +3878,12 @@ const GU_CLS={
  '宙锚仙蛊':{cls:'辅助',fn:'推演',p:{'inf':8}}, // 光阴长河标记·配合人如故/江山如故锚136933/136937
  '仿伪蛊':{cls:'辅助',fn:'炼制',p:{'ref':5,'note':'仙蛊转变模仿（锚404438）',qmul:'珍稀'}}, // 仙蛊转变模仿锚404438/404440（奇蛊榜第八·盗天魔尊）；批36D：珍稀（锚404438「仿伪蛊，位列当今奇蛊榜」直证）
  '江山如故仙蛊':{cls:'辅助',fn:'产出',p:{'note':'功用杀招月结仙元+20%（锚401214·批29实装）'}}, // 修复地貌锚401214/113390；月结产出已挂（批29）
- '百年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·七转（锚210309）·削年份隔离区'}}, // 年蛊体系七转锚210309（岁月储备语义〔设计映射·隔离区〕）
- '一年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·削年份机制隔离区（锚210296）'}}, // 年蛊体系锚210302/210296-210324
- '两年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·削年份机制隔离区（锚210298）'}}, // 同上
- '五年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·削年份机制隔离区（锚210300）'}}, // 同上
- '十年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·六转世间唯一（锚210304）·削年份隔离区'}}, // 六转仙蛊世间唯一锚210304
- '千年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·八转层级（锚210313）·削年份隔离区'}}, // 八转层级锚210313
+ '百年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备·七转（锚210309）；蛊虫页「开采年份」：岁月灌体转化为修行，用即削年份、年份低于档位即跌转/消亡（锚210319/210321·批142实装）'}}, // 年蛊体系七转锚210309
+ '一年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备一年·开采年份：岁月灌体转化为修行，用即削年份（锚210319/210321·批142实装）'}}, // 年蛊体系锚210302/210296-210324
+ '两年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备两年·开采年份机制同上（锚210319/210321·批142实装）'}}, // 同上
+ '五年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备五年·开采年份机制同上（锚210319/210321·批142实装）'}}, // 同上
+ '十年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备十年·六转世间唯一（锚210304）；开采年份：用即削年份、年份低于档位即跌转（锚210319/210321·批142实装）'}}, // 六转仙蛊世间唯一锚210304
+ '千年蛊':{cls:'辅助',fn:'产出',p:{'note':'岁月储备千年·八转层级（锚210313）；开采年份：用即削年份、跌转同上（批142实装）'}}, // 八转层级锚210313
  // —— 运道（9）——
  '因祸得福仙蛊':{cls:'辅助',fn:'产出',p:{'note':'渡劫道痕翻倍（锚139546·批17实装）'}}, // 渡劫道痕翻倍锚139546
  '狗屎运仙蛊':{cls:'辅助',fn:'修炼',p:{'ins':3,'luck':0.05}}, // 六转锚200445
@@ -4179,7 +4176,7 @@ Object.assign(GU_CLS,{
  '狼烟蛊':{cls:'战斗',fn:'恢复',p:{healHp:40,note:'四转狼烟，疗治狼兽（锚28635/80719）'}},
  '爱别离':{cls:'战斗',fn:'攻击',p:{pow:26,note:'二转第一毒（锚11646）'}},
  '旋踵蛊':{cls:'辅助',fn:'速度',p:{spd:8,note:'移动类，加速转身（锚57971）'}},
- '狂风蛊':{cls:'战斗',fn:'攻击',p:{pow:24,note:'风道，与旋踵蛊合为攻防一体（锚28340）〔数值设计映射〕'}},
+ '狂风蛊':{cls:'战斗',fn:'攻击',p:{pow:42,note:'风道，与旋踵蛊合为攻防一体（锚28340）〔数值设计映射·批142：原24低于三转标准档，回调至标准1.0〕'}},
  '雪女蛊':{cls:'辅助',fn:'其他',p:{note:'冰道三大变身蛊之一（锚50008/73319）〔设计映射·变身不涉结算〕'}},
  '铁柜蛊':{cls:'战斗',fn:'防御',p:{def:36,note:'三转铁家困敌之蛊，配化气蛊成牢（锚65465/65678）'}},
  '挪移蛊':{cls:'辅助',fn:'速度',p:{spd:22,note:'五转宇道，破空挪移（锚71338/73578）'}},
@@ -4205,7 +4202,7 @@ Object.assign(GU_CLS,{
  '五窍火塔蛊':{cls:'战斗',fn:'攻击',p:{pow:65,note:'炎道五转（锚155218）'}},
  '规矩二蛊':{cls:'辅助',fn:'其他',p:{note:'一圆一方，可捕天下万蛊（锚8694）〔设计映射·人祖传说〕'}},
  '龙行虎步蛊':{cls:'辅助',fn:'速度',p:{spd:14,note:'四转，飞速前行兼冲撞（锚58922）'}},
- '雪球蛊':{cls:'战斗',fn:'攻击',p:{pow:28,note:'三转中高端远程（锚55026）'}},
+ '雪球蛊':{cls:'战斗',fn:'攻击',p:{pow:45,note:'三转中高端远程（锚55026直证定位·批142：原28低于中高端档，回调至1.07）'}},
  '阴阳转身蛊':{cls:'辅助',fn:'其他',p:{note:'阴阳互转、转身成人（锚33423）〔设计映射·不涉结算〕'}},
  '仙风蛊':{cls:'辅助',fn:'速度',p:{spd:16,note:'四转风道（锚56636）'}},
  '明星蛊':{cls:'辅助',fn:'其他',p:{note:'定星蛊合炼组件（锚56638）〔设计映射〕'}},
@@ -8195,6 +8192,30 @@ function actTaskDo(){ // 执行当前任务/仙窍事务
     checkEndings();render();
   }
 }
+const NIANYEARS={'一年蛊':1,'两年蛊':2,'五年蛊':5,'十年蛊':10,'百年蛊':100,'千年蛊':1000}; // 批142：年蛊内蕴年份（锚210302-210315）
+const isNianGu=n=>/^(一|两|五|十|百|千)年蛊$/.test(n);
+function nianGuEnsure(g){if(isNianGu(g.name)&&typeof g.yrs!=='number')g.yrs=NIANYEARS[g.name]||1}
+function actNianGuUse(uid){ // 批142：开采年份——岁月灌体化为修行；用即削年份，年份低于档位即跌转/消亡（锚210319/210321）
+  const g=guByUid(+uid);if(!g||!isNianGu(g.name))return;
+  nianGuEnsure(g);
+  const cons=Math.max(1,Math.ceil((g.yrs||1)*0.4)); // 用量随存量四成〔设计映射〕
+  const gain=Math.round(trainGain()*30*cons); // 每一年光阴=一月修行收益〔设计映射〕
+  S.realm.exp=(S.realm.exp||0)+gain;
+  g.yrs=(g.yrs||1)-cons;
+  glog(`你催动「${g.name}」，开采${cons}年光阴灌入己身——修为+${fmt(gain)}（锚210319「根据使用的次数和量，不断削减年份」；岁月化修行〔设计映射〕）。`,'good');
+  checkAttain();
+  nianGuRetier(g);
+  doAuto();render();
+}
+function nianGuRetier(g){ // 批142：年份低于档位即跌转/消亡（锚210321「一千年蛊使用之后，成为九百年蛊，七转仙蛊跌落成六转」直证）
+  const y=g.yrs||0;
+  const tier=y>=1000?{n:'千年蛊',r:8}:y>=100?{n:'百年蛊',r:7}:y>=10?{n:'十年蛊',r:6}:y>=5?{n:'五年蛊',r:3}:y>=2?{n:'两年蛊',r:2}:y>=1?{n:'一年蛊',r:1}:null;
+  if(!tier){
+    S.gus=S.gus.filter(x=>x!==g);S.lineup=(S.lineup||[]).filter(u=>u!==g.uid);if(S.vital===g.uid){S.vital=null;S.injury=Math.max(S.injury||0,20)}
+    glog(`「${g.name}」年份耗尽——岁月流尽，蛊随之消亡（锚210321〔设计映射〕）。`,'warn');toast('年蛊年份耗尽','warn');return;
+  }
+  if(tier.n!==g.name){const old=g.name;g.name=tier.n;g.rank=tier.r;glog(`「${old}」年份削减至余${y}年——跌落为${CN(tier.r)}转「${tier.n}」（锚210321直证跌转）。`,'warn')}
+}
 function actContribBuy(id,times){ // 贡献兑换阁（任务→贡献→凡材/蛊方/一转蛊/元石）；批141：支持批量（×1/×5/×10，用户需求）
   const C=CONTRIB_SHOP.find(x=>x.id===id);if(!C)return;
   const T0=taskInit();
@@ -8488,8 +8509,12 @@ function readAuxInfer(){
     house:!!document.querySelector('.iauxhouse:checked')};
 }
 // 辅助蛊虫勾选组（同道蛊虫催化，锚170899；非本命、未沉眠）
-function auxGuChks(prefix,gus){
-  return gus.map(g=>`<label style="font-size:var(--fs-s);display:block"><input type="checkbox" class="${prefix}" value="${g.uid}"> ${esc(g.name)}·${g.rank}转（同道催化+3%）</label>`).join('')||'<span class="dim" style="font-size:var(--fs-s)">囊中暂无可用蛊虫</span>';
+function auxGuChks(prefix,gus,mode){ // 批142：mode='infer' 时标注全道通用/同道限定（用户反馈：并非所有蛊虫都能增幅推演）
+  return gus.map(g=>{
+    let tag='（同道催化+3%）';
+    if(mode==='infer'){const gs=guSchoolArr(g.name);tag=(gs.includes('智')||((guClsOf(g.name).p||{}).inf))?'<span class="tag g">全道通用</span>':'<span class="dim">（限同道目标方生效）</span>'}
+    return `<label style="font-size:var(--fs-s);display:block"><input type="checkbox" class="${prefix}" value="${g.uid}"> ${esc(g.name)}·${g.rank}转 ${tag}</label>`;
+  }).join('')||'<span class="dim" style="font-size:var(--fs-s)">囊中暂无可用蛊虫</span>';
 }
 // 辅助杀招勾选组（对应功用杀招：施展耗资如常，锚106；蛊仙纯凡蛊杀招合计1颗青提——批22）
 function auxKmChks(prefix,type){
@@ -10471,6 +10496,25 @@ function guPackCard(){ // 批100：蛊群（宝黄天凡蛊批）卡片
     <p class="dim" style="font-size:var(--fs-xs);margin:4px 0 6px">蛊仙在宝黄天收购凡蛊，向来成批走货（锚98638 三百只五转蛊换两三块仙元石、锚124084 三四千只三转蛊作价半块）。此处按名堆叠，散出后与寻常蛊虫无异：可上阵、炼蛊、食道吞噬、委托出售。</p>
     ${rows}</div>`;
 }
+function guDesc(name){ // 批142：蛊虫作用详述（用户反馈：蛊虫界面缺完整描述）
+  const c=guClsOf(name),p=c.p||{};const parts=[];
+  if(p.pow)parts.push(`攻击·威力基准${p.pow}${p.acc?`，命中+${p.acc}`:''}`);
+  if(p.def)parts.push(`防御加成+${p.def}`);
+  if(p.healMnd)parts.push(`心念恢复+${p.healMnd}`);
+  if(p.temp)parts.push(`催动得「${p.temp.label}」：${p.temp.stat==='atk'?`攻势×${p.temp.mul}`:''}${p.temp.rounds?`（${p.temp.rounds}回合）`:''}`);
+  if(p.dot)parts.push(`命中附带${p.dot.label||'持续伤害'}（每回合${p.dot.pct}%×${p.dot.rounds}回合）`);
+  if(p.debuff)parts.push(`减益：${p.debuff.label||p.debuff.type||'扰敌'}${p.debuff.mul?`（×${p.debuff.mul}）`:''}`);
+  if(p.fog)parts.push(`迷雾：敌命中受挫${p.fog.rounds}回合`);
+  if(p.track)parts.push('锁定敌踪（命中+20%）');
+  if(p.dh)parts.push(`可刻印：道痕+${p.dh[1]}`);
+  if(p.out)parts.push(`月产「${p.out}」×${p.qty||1}`);
+  if(p.ins)parts.push(`修炼感悟+${p.ins}/月`);
+  if(p.luck)parts.push(`奇遇+${Math.round(p.luck*100)}%`);
+  if(p.inf)parts.push(`推演+${p.inf}%`);
+  if(p.ref)parts.push(`炼制+${p.ref}%`);
+  if(p.note)parts.push(p.note);
+  return parts.join('；')||`${guFnTxt(name)}（原著职能，详见行录）`;
+}
 function tabGu(){
   const v=guByUid(S.vital);
   // 批20：蛊虫管理界面——流派筛选＋全局搜索（会话级UIF，不入存档）
@@ -10482,17 +10526,19 @@ function tabGu(){
       <div class="gucard">
         <div>
           ${g.uid===S.vital?'<span class="tag">本命</span>':''}${g.immortal?'<span class="tag r">仙蛊</span>':''}
-          <b>${esc(g.name)}</b> <span class="dim" style="font-size:var(--fs-s)">${CN(g.rank)}转 · <b class="gold" style="font-size:var(--fs-xs)">${guFnTxt(g.name)}</b>${g.sleep?' · 沉眠':''}${g.unstable?' · <span class="red">品级波动</span>':''}${guSchoolArr(g.name).length?' · '+guSchoolTxt(g.name):''}</span>
+          <b>${esc(g.name)}</b> <span class="dim" style="font-size:var(--fs-s)">${CN(g.rank)}转${isNianGu(g.name)?` · 余${g.yrs!=null?g.yrs:(NIANYEARS[g.name]||1)}年`:''} · <b class="gold" style="font-size:var(--fs-xs)">${guFnTxt(g.name)}</b>${g.sleep?' · 沉眠':''}${g.unstable?' · <span class="red">品级波动</span>':''}${guSchoolArr(g.name).length?' · '+guSchoolTxt(g.name):''}</span>
           ${g.uid!==S.vital&&!inLine&&guClsOf(g.name).cls==='战斗'&&!g.sleep?`<span class="red" style="font-size:var(--fs-xs)">未上阵·战中不可催动（辅助/增益蛊亦须上阵）</span>`:''}
           <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:var(--fs-xs)">
             <span class="dim">饱食</span><div class="meter"><i style="width:${Math.round(g.sat)}%;background:${satColor(st)}"></i></div>
             <span style="color:${satColor(st)}">${st}${isImmortal()&&!g.immortal?'':' '+Math.round(g.sat)+'%'}</span>
           </div>
           <p class="dim" style="font-size:var(--fs-xs);margin:3px 0 0">食性：${esc(dietTxt(g.name))}${!g.immortal&&!isImmortal()?`｜一次需 ${esc(feedReqTxt(g.name))}`:''}</p>
+          <details style="margin-top:2px"><summary class="dim" style="font-size:var(--fs-xs);cursor:pointer">作用详述（批142）</summary><p class="dim" style="font-size:var(--fs-xs);margin:2px 0 0">${guDesc(g.name)}｜流派：${guSchoolTxt(g.name)||'无'}${isNianGu(g.name)?`｜余${g.yrs!=null?g.yrs:(NIANYEARS[g.name]||1)}年（蛊虫页可开采年份）`:''}</p></details>
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
         ${!S.vital&&!g.sleep?`<button class="btn small primary" data-vital="${g.uid}" title="立为本命蛊——心神相连（用户批31裁决：仅未立/本命蛊陨落后可立）">立为本命蛊</button>`:''}
+        ${isNianGu(g.name)&&!g.sleep?`<button class="btn small primary" data-nianuse="${g.uid}" title="开采年份：岁月灌体化为修行（用即削年份，年份低于档位即跌转/消亡，锚210319/210321）">开采年份（余${g.yrs!=null?g.yrs:(NIANYEARS[g.name]||1)}年）</button>`:''}
         ${g.uid!==S.vital?`<button class="btn small" data-lineup="${g.uid}">${inLine?'下阵':'上阵'}</button>`:''}
         <button class="btn small" data-feed="${g.uid}" ${g.immortal||isImmortal()?'disabled':''} title="食性：${esc(dietTxt(g.name))}">喂食（${esc(feedReqTxt(g.name))}）</button>
         <button class="btn small" data-sleep="${g.uid}">${g.sleep?'唤醒':'沉眠'}</button>
@@ -10992,8 +11038,8 @@ function tabRefine(){
     <b class="gold">推演辅助 · 显式催动（对本页全部推演生效）</b>
     <p class="dim" style="font-size:var(--fs-xs);margin:4px 0">勾选后，本页所有「推演」皆催动之：同道/智道蛊虫每只+3%（至多五只，锚170899同道催化、131260智道推算）｜推演类杀招+10%（具名+15%，施展按杀招耗真元/仙元，锚763/1146）｜仙蛊屋推演槽+10%（监天塔，锚142765）。批20：原自动加成改为显式勾选。</p>
     <div style="margin:6px 0">
-      <div style="margin:2px 0"><b>蛊虫</b>（智道/同道方生效）：</div>
-      ${auxGuChks('iauxgu',imGus)}
+      <div style="margin:2px 0"><b>蛊虫</b>（智道蛊/推演功能蛊全道通用；同道蛊仅同类蛊方推演生效，每只+3%、至多五只，锚170899）：</div>
+      ${auxGuChks('iauxgu',imGus,'infer')}
       <div style="margin:6px 0 2px"><b>推演类杀招</b>：</div>
       ${infKms}
       ${houseHas('推演')?`<label style="font-size:var(--fs-s);display:block"><input type="checkbox" class="iauxhouse"> 仙蛊屋推演槽（监天塔，+10%，锚142765）</label>`:''}
@@ -11098,13 +11144,12 @@ function tabMarket(){
       <b>货币</b><span>${nodeCurLabel(cur)}</span>
       <b>抽成</b><span>${feeTxt}</span>
       <b>刷新</b><span>约${n.refresh||7}天一轮（尚余${rem}天）</span>
-      <b>锚点</b><span>原著第${esc(n.anchor)}章</span>
     </div>
     <div class="sum-chips"><span>货架 <b>${stockN}</b> 件</span><span>行囊材料 <b>${matN}</b> 种</span><span>闲置蛊 <b>${idleN}</b> 只</span><span>在售 <b>${(S.consign||[]).length}</b> 单</span></div>
     ${n.gate>=6&&!isImmortal()?'<p class="warn" style="font-size:var(--fs-s);color:var(--warn);margin:6px 0 0">仙市非凡蛊师可亲至——须经地灵代购，抽成加重。</p>':''}
     <p class="dim" style="font-size:var(--fs-xs);margin:6px 0 0">各市定位迥异：凡市售蛊材蛊方，仙市售仙材·仙蛊屋图纸·六转残方；东海以物易物，仙蛊换仙蛊（非钱能买）。</p>
     ${n.layer==='仙'?'<p class="dim" style="font-size:var(--fs-xs);margin:4px 0 0">仙凡之隔：蛊仙收购凡蛊向来成批走货（经营仙窍、杀招、仙蛊屋、扶持势力，锚98734/119969），故此处只售「凡蛊批」，不拆零；仙蛊唯一，不入货架，只在专场拍卖（锚98674）。一块仙元石，纵两亿元石也换不来（锚86019）。</p>':''}
-    <button class="btn small" data-act="trade" style="margin-top:8px">盘桓半日（3天，催动刷新）</button>
+    ${n.layer==='凡'&&(n.refresh||7)<30?`<button class="btn small" data-act="trade" style="margin-top:8px">盘桓半日（3天，催动刷新）</button>`:'<p class="dim" style="font-size:var(--fs-xs);margin:8px 0 0">此市货源自有定期，不随盘桓刷新（批142）。</p>'}
   </div>
   ${cur==='baohuang'?`<div class="card">
     <b class="gold">宝黄天 · 仙蛊专场</b>
@@ -11716,7 +11761,11 @@ function bindTab(){
     if(a==='ascend')actAscend();
     if(a==='tri')runTribulation();
     if(a==='promote')actPromote();
-    if(a==='trade'){advanceDays(3,'集市盘桓');if(!S.alive)return;S.markets={};render()}
+    if(a==='trade'){advanceDays(3,'集市盘桓');if(!S.alive)return;
+      const cn=MARKET_NODES[S.mkt]||{};
+      if(cn.layer==='凡'&&(cn.refresh||7)<30){delete S.markets[S.mkt];glog('你于集市盘桓三日，货源为之一新（批142：仅常规凡市随盘桓刷新——拍卖会与仙市各有定期，不因盘桓而变）。')}
+      else glog('此市货源自有定期，非盘桓可催动刷新（批142）。');
+      render()}
   });
   document.querySelectorAll('[data-dougu]').forEach(b=>b.onclick=()=>actDougu()); // 批80：斗蛊大会
   document.querySelectorAll('[data-qingmao]').forEach(b=>b.onclick=()=>actQingmao()); // 批80：青茅山历练
@@ -11747,11 +11796,14 @@ function bindTab(){
   document.querySelectorAll('[data-cxtier]').forEach(b=>b.onclick=()=>{UIF.cxMatTier=b.dataset.cxtier;UIF.cxPage=0;render()}); // 批54A：蛊材阶位筛选
   document.querySelectorAll('[data-guquick]').forEach(b=>b.onclick=()=>{UIF.gu.q=UIF.gu.q===b.dataset.guquick?'':b.dataset.guquick;render()}); // 批53B：缺食筛选
   document.querySelectorAll('[data-fgrp]').forEach(b=>b.onclick=()=>{const[f,v]=b.dataset.fgrp.split('|');UIF[f]=v;render()}); // 批30：分组折叠维度切换
-  document.querySelectorAll('.fsearch').forEach(inp=>inp.oninput=()=>{
-    const k=inp.dataset.ftag;UIF[k].q=inp.value.trim();
-    if(k==='ref'){UIF.refPage=0;render();const ni=document.querySelector('.fsearch[data-ftag="ref"]');if(ni){ni.focus();ni.setSelectionRange(ni.value.length,ni.value.length)}} // 批54A：炼制搜索跨页重排
-    else applyFilter(k);
-  }); // 批20：即时搜索（不整页刷新，保持焦点）
+  document.querySelectorAll('.fsearch').forEach(inp=>{
+    const apply=()=>{const k=inp.dataset.ftag;UIF[k].q=inp.value.trim();
+      if(k==='ref'){UIF.refPage=0;render();const ni=document.querySelector('.fsearch[data-ftag="ref"]');if(ni){ni.focus();ni.setSelectionRange(ni.value.length,ni.value.length)}} // 批54A：炼制搜索跨页重排
+      else applyFilter(k);};
+    inp.oninput=()=>{if(inp.dataset.ime==='1')return;apply()}; // 批142：输入法组字过程不触发（中文打字不再变字母）
+    inp.addEventListener('compositionstart',()=>{inp.dataset.ime='1'});
+    inp.addEventListener('compositionend',()=>{inp.dataset.ime='0';apply()});
+  }); // 批20：即时搜索（不整页刷新，保持焦点）+批142组字守卫
   const infS=$('#infSchool');if(infS)infS.onchange=()=>{UIF.inf2.sc=infS.value;UIF.inf2.q='';UIF.inf2Page=0;render()}; // 批20：定向推演流派切换；维护M4：重置分页
   const infR=$('#infRand');if(infR)infR.onclick=()=>{
     // 批20定向推演：随机推演所选流派内一蛊之方（锚131260推算耗智道心力）
@@ -11935,9 +11987,10 @@ document.querySelectorAll('[data-kmauto]').forEach(b=>b.onclick=()=>{const n=b.d
   document.querySelectorAll('[data-feed]').forEach(b=>b.onclick=()=>feedGu(+b.dataset.feed));
   document.querySelectorAll('[data-sleep]').forEach(b=>b.onclick=()=>toggleSleep(+b.dataset.sleep));
   document.querySelectorAll('[data-lineup]').forEach(b=>b.onclick=()=>toggleLineup(+b.dataset.lineup));
+  document.querySelectorAll('[data-nianuse]').forEach(b=>b.onclick=()=>actNianGuUse(b.dataset.nianuse)); // 批142：年蛊开采年份
   document.querySelectorAll('[data-guup]').forEach(b=>b.onclick=()=>showGuUpgrade(+b.dataset.guup));
   document.querySelectorAll('[data-gushl]').forEach(b=>b.onclick=()=>showGuShenglian(+b.dataset.gushl)); // 批30：升炼弹窗
-  document.querySelectorAll('[data-node]').forEach(b=>b.onclick=()=>{S.mkt=b.dataset.node;render()});
+  document.querySelectorAll('[data-node]').forEach(b=>b.onclick=()=>{S.mkt=b.dataset.node;UIF.mktQ='';UIF.mktK='';UIF.mktAff=false;UIF.mktS='';render()}); // 批142：切市重置筛选/排序（旧市关键词残留会把新市货架滤空，用户反馈）
   document.querySelectorAll('[data-explorebatch]').forEach(b=>b.onclick=()=>{const el=$('#expN');const n=Math.max(2,Math.min(10,+((el&&el.value)||3)||3));UIF.expN=n;actExploreBatch(n)}); // 批101：连续探索
   document.querySelectorAll('[data-immauct]').forEach(b=>b.onclick=()=>openImmAuction()); // 批100：宝黄天仙蛊专场
   document.querySelectorAll('[data-packout]').forEach(b=>b.onclick=()=>packOut(b.dataset.packout,+b.dataset.packn||1)); // 批100：蛊群散出
